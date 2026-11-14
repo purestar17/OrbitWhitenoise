@@ -370,6 +370,7 @@ class Rain {
 // Painted pictures live in art/. A background per mood, and a picture per sound layer.
 // Positions are in % of the 941x1672 background frame.
 const BG = { day: 'art/bg-day.jpg', night: 'art/bg-night.jpg', rain: 'art/bg-rain.jpg', dusk: 'art/bg-dusk.jpg' };
+const FRAME = 941 / 1672;
 const PROPS = [
   // layer, file, style (inside the frame)
   ['stormcloud', 'art/stormclouds.webp', 'left:-30%;width:160%;top:30%;height:16%', 'cloudp'],
@@ -377,9 +378,18 @@ const PROPS = [
   ['trees', 'art/pines-right.webp', 'right:-10%;width:50%;bottom:-2%;height:42%'],
   ['trees', 'art/tree-left.webp', 'left:-12%;width:64%;bottom:-1%;height:54%'],
 ];
+// Props that land somewhere new (and pick one of their pictures) each time their sound is added.
+// ratio = height / width of the picture; x = centre range, bottom = ground range, w = width range (all %)
+const RANDOM = [
+  { layer: 'ripple', variants: [['art/puddle01.webp', 0.32], ['art/puddle02.webp', 0.284], ['art/puddle03.webp', 0.211]],
+    x: [22, 78], bottom: [7, 16], w: [32, 44], extra: '<span class="rings"><i></i><i></i><i></i></span>' },
+  { layer: 'tent', variants: [['art/tent.webp', 0.689]],
+    x: [20, 80], bottom: [6, 14], w: [32, 40], extra: '<span class="lamp"></span>' },
+];
 // layers drawn by the pictures above (their code-drawn versions are hidden)
-const PAINTED = new Set([...PROPS.map((p) => p[0]), 'lake', 'sea']); // the background already has the lake
+const PAINTED = new Set([...PROPS.map((p) => p[0]), ...RANDOM.map((p) => p.layer), 'lake', 'sea']); // the background already has the lake
 const FIRE_SCENES = new Set(['fire', 'fireplace', 'cafe', 'clock']);
+const rr = (a, b) => a + Math.random() * (b - a);
 
 // ---------------------------------------------------------------- public
 // Decide mood + layers from the tracks of the current mix.
@@ -407,6 +417,7 @@ export class Landscape {
     this.root = null;
     this.svg = null;
     this.rain = null;
+    this.placed = new Map(); // layer -> {x, w} while shown
   }
   mount(host) {
     if (!this.root) {
@@ -416,6 +427,7 @@ export class Landscape {
         ${Object.entries(BG).map(([k, src]) => `<img class="bg" data-bg="${k}" src="${src}" alt="" draggable="false">`).join('')}
         <div class="shimmer"><i></i><i></i><i></i><i></i><i></i></div>
         ${PROPS.map(([l, src, st, cls]) => `<img class="prop ${cls || ''}" data-p="${l}" src="${src}" style="${st}" alt="" draggable="false" loading="lazy">`).join('')}
+        ${RANDOM.map((p) => `<div class="prop rnd" data-p="${p.layer}"><img alt="" draggable="false">${p.extra || ''}</div>`).join('')}
         ${build()}
       </div>`;
       this.root = root;
@@ -426,14 +438,39 @@ export class Landscape {
     if (this.root.parentNode !== host) host.prepend(this.root);
     return this.root;
   }
+  // choose a picture and a free spot on the meadow
+  place(el, spec) {
+    const [src, ratio] = spec.variants[Math.floor(Math.random() * spec.variants.length)];
+    let best = null;
+    for (let i = 0; i < 12; i++) {
+      const bottom = rr(...spec.bottom);
+      const w = rr(...spec.w) * (1 + (spec.bottom[1] - bottom) * 0.025); // nearer = bigger
+      const x = rr(...spec.x);
+      const clash = [...this.placed.entries()].filter(([l]) => l !== spec.layer)
+        .reduce((s, [, o]) => s + Math.max(0, Math.min(x + w / 2, o.x + o.w / 2) - Math.max(x - w / 2, o.x - o.w / 2)), 0);
+      if (!best || clash < best.clash) best = { x, w, bottom, clash };
+      if (!clash) break;
+    }
+    const { x, w, bottom } = best;
+    this.placed.set(spec.layer, { x, w });
+    const img = el.querySelector('img');
+    img.src = src;
+    el.style.cssText = `left:${x - w / 2}%;width:${w}%;bottom:${bottom}%;height:${w * FRAME * ratio}%;z-index:${Math.round(30 - bottom)}`;
+    el.classList.toggle('flip', Math.random() < 0.5);
+  }
   set({ on, mood, night, grey, mode }) {
     if (!this.root) return;
     this.root.className = `lsx m-${mood}${night && grey ? ' wet' : ''}${on.get('sea') === 'on' ? ' waves' : ''}`;
     this.root.querySelectorAll('.bg').forEach((im) => im.classList.toggle('on', im.dataset.bg === mood));
-    this.root.querySelectorAll('.prop').forEach((im) => {
-      const st = on.get(im.dataset.p);
-      im.classList.toggle('on', st === 'on');
-      im.classList.toggle('dim', st === 'dim');
+    this.root.querySelectorAll('.prop').forEach((el) => {
+      const st = on.get(el.dataset.p);
+      if (el.classList.contains('rnd')) {
+        const shown = el.classList.contains('on') || el.classList.contains('dim');
+        if (st && !shown) this.place(el, RANDOM.find((p) => p.layer === el.dataset.p));
+        if (!st) this.placed.delete(el.dataset.p);
+      }
+      el.classList.toggle('on', st === 'on');
+      el.classList.toggle('dim', st === 'dim');
     });
     this.svg.setAttribute('class', `ls img ${mode}`);
     this.svg.querySelectorAll('[data-l]').forEach((g) => {
@@ -446,11 +483,13 @@ export class Landscape {
   }
   // react to a one-shot play
   hit(scene) {
-    if (!this.svg) return;
-    const g = scene === 'thunder' ? this.svg.querySelector('.bolt') : scene === 'under' ? this.svg.querySelector('.ripple') : null;
+    if (!this.root) return;
+    let g = null;
+    if (scene === 'thunder') g = this.svg.querySelector('.bolt');
+    if (scene === 'under') g = this.root.querySelector('.rnd[data-p="ripple"] .rings');
     if (!g) return;
     g.classList.remove('go');
-    void g.getBBox();
+    void g.offsetWidth;
     g.classList.add('go');
   }
 }

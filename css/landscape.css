@@ -165,4 +165,22 @@
 @keyframes ls-cloudp{to{transform:translateX(6%)}}
 @keyframes ls-glint{0%,100%{opacity:0;transform:translateX(-10px)}50%{opacity:.7;transform:translateX(10px)}}
 .lsx.waves .shimmer i{height:3px;animation-duration:2.6s;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent)}
+
+/* props placed at random */
+.lsx .prop.rnd img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.lsx .prop.rnd.flip{transform:scaleX(-1)}
+.lsx .prop.rnd{filter:none!important}
+.lsx .prop.rnd img{transition:filter 1.6s}
+.lsx.m-night .prop.rnd img{filter:brightness(.42) saturate(.75) hue-rotate(12deg)}
+.lsx.m-rain .prop.rnd img{filter:brightness(.82) saturate(.7)}
+.lsx.m-dusk .prop.rnd img{filter:brightness(.68) saturate(.85) hue-rotate(-6deg)}
+.lsx .rings{position:absolute;left:50%;top:52%;width:0;height:0}
+.lsx .rings i{position:absolute;left:0;top:0;border:2px solid rgba(255,255,255,.75);border-radius:50%;width:0;height:0;opacity:0;animation:ls-ring 3.2s ease-out infinite}
+.lsx .rings i:nth-child(2){animation-delay:1.1s;left:-60px;top:6px}
+.lsx .rings i:nth-child(3){animation-delay:2.2s;left:50px;top:-4px}
+.lsx .rings.go i:first-child{animation:ls-ring 1.6s ease-out}
+.lsx .lamp{position:absolute;left:60%;top:42%;width:55%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(rgba(255,200,110,.45),rgba(255,170,70,.12) 40%,transparent 68%);opacity:0;transition:opacity 1.6s;mix-blend-mode:screen;animation:ls-lamp 3s ease-in-out infinite alternate}
+.lsx.m-night .lamp,.lsx.m-dusk .lamp,.lsx.m-rain .lamp{opacity:1}
+@keyframes ls-ring{0%{width:0;height:0;margin:0;opacity:.9}100%{width:90px;height:22px;margin:-11px 0 0 -45px;opacity:0}}
+@keyframes ls-lamp{to{filter:brightness(1.15)}}
 @media (prefers-reduced-motion:reduce){.ls *,.lsx *{animation:none!important}}
