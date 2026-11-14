@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump VERSION when app files change so users get the new version.
-const VERSION = 'orbit-v3';
+const VERSION = 'orbit-v4';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'css/scenes.css', 'css/landscape.css',
   'js/main.js', 'js/engine.js', 'js/model.js', 'js/landscape.js',

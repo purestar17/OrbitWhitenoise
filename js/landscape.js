@@ -366,45 +366,78 @@ class Rain {
   }
 }
 
+// ---------------------------------------------------------------- illustrated layers
+// Painted pictures live in art/. A background per mood, and a picture per sound layer.
+// Positions are in % of the 941x1672 background frame.
+const BG = { day: 'art/bg-day.jpg', night: 'art/bg-night.jpg', rain: 'art/bg-rain.jpg', dusk: 'art/bg-dusk.jpg' };
+const PROPS = [
+  // layer, file, style (inside the frame)
+  ['stormcloud', 'art/stormclouds.webp', 'left:-30%;width:160%;top:30%;height:16%', 'cloudp'],
+  ['river', 'art/stream.webp', 'left:24%;width:64%;top:70%;height:31%'],
+  ['trees', 'art/pines-right.webp', 'right:-10%;width:50%;bottom:-2%;height:42%'],
+  ['trees', 'art/tree-left.webp', 'left:-12%;width:64%;bottom:-1%;height:54%'],
+];
+// layers drawn by the pictures above (their code-drawn versions are hidden)
+const PAINTED = new Set([...PROPS.map((p) => p[0]), 'lake', 'sea']); // the background already has the lake
+const FIRE_SCENES = new Set(['fire', 'fireplace', 'cafe', 'clock']);
+
 // ---------------------------------------------------------------- public
-// Decide mode + layers from the tracks of the current mix.
+// Decide mood + layers from the tracks of the current mix.
 export function layersFor(tracks, getSound) {
   const on = new Map(); // layer -> 'on' | 'dim'
-  let night = false, grey = false;
+  let night = false, grey = false, fire = false;
   for (const t of tracks) {
     const s = getSound(t.soundId);
     if (!s) continue;
     const sc = s.scene || 'mine';
     if (NIGHT_SCENES.has(sc)) night = true;
     if (GREY_SCENES.has(sc) && !t.muted) grey = true;
+    if (FIRE_SCENES.has(sc) && !t.muted) fire = true;
     for (const l of SCENE_LAYERS[sc] || []) {
       if (!t.muted) on.set(l, 'on');
       else if (!on.has(l)) on.set(l, 'dim');
     }
   }
-  return { on, mode: (night ? 'night' : 'day') + (grey ? ' grey' : '') };
+  const mood = night ? 'night' : grey ? 'rain' : fire ? 'dusk' : 'day';
+  return { on, mood, night, grey, mode: (night || fire ? 'night' : 'day') + (grey ? ' grey' : '') };
 }
 
 export class Landscape {
   constructor() {
-    this.el = null;
+    this.root = null;
+    this.svg = null;
     this.rain = null;
   }
   mount(host) {
-    if (!this.el) {
-      const d = document.createElement('div');
-      d.innerHTML = build();
-      this.el = d.firstElementChild;
+    if (!this.root) {
+      const root = document.createElement('div');
+      root.className = 'lsx';
+      root.innerHTML = `<div class="stage">
+        ${Object.entries(BG).map(([k, src]) => `<img class="bg" data-bg="${k}" src="${src}" alt="" draggable="false">`).join('')}
+        <div class="shimmer"><i></i><i></i><i></i><i></i><i></i></div>
+        ${PROPS.map(([l, src, st, cls]) => `<img class="prop ${cls || ''}" data-p="${l}" src="${src}" style="${st}" alt="" draggable="false" loading="lazy">`).join('')}
+        ${build()}
+      </div>`;
+      this.root = root;
+      this.svg = root.querySelector('svg');
       this.rain = new Rain();
+      root.append(this.rain.cv);
     }
-    if (this.el.parentNode !== host) { host.prepend(this.rain.cv); host.prepend(this.el); }
-    return this.el;
+    if (this.root.parentNode !== host) host.prepend(this.root);
+    return this.root;
   }
-  set({ on, mode }) {
-    if (!this.el) return;
-    this.el.setAttribute('class', `ls ${mode}`);
-    this.el.querySelectorAll('[data-l]').forEach((g) => {
-      const st = on.get(g.dataset.l);
+  set({ on, mood, night, grey, mode }) {
+    if (!this.root) return;
+    this.root.className = `lsx m-${mood}${night && grey ? ' wet' : ''}${on.get('sea') === 'on' ? ' waves' : ''}`;
+    this.root.querySelectorAll('.bg').forEach((im) => im.classList.toggle('on', im.dataset.bg === mood));
+    this.root.querySelectorAll('.prop').forEach((im) => {
+      const st = on.get(im.dataset.p);
+      im.classList.toggle('on', st === 'on');
+      im.classList.toggle('dim', st === 'dim');
+    });
+    this.svg.setAttribute('class', `ls img ${mode}`);
+    this.svg.querySelectorAll('[data-l]').forEach((g) => {
+      const st = PAINTED.has(g.dataset.l) ? null : on.get(g.dataset.l);
       g.classList.toggle('on', st === 'on');
       g.classList.toggle('dim', st === 'dim');
     });
@@ -413,8 +446,8 @@ export class Landscape {
   }
   // react to a one-shot play
   hit(scene) {
-    if (!this.el) return;
-    const g = scene === 'thunder' ? this.el.querySelector('.bolt') : scene === 'under' ? this.el.querySelector('.ripple') : null;
+    if (!this.svg) return;
+    const g = scene === 'thunder' ? this.svg.querySelector('.bolt') : scene === 'under' ? this.svg.querySelector('.ripple') : null;
     if (!g) return;
     g.classList.remove('go');
     void g.getBBox();

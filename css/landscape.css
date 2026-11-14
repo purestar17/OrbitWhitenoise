@@ -131,4 +131,38 @@
 @keyframes ls-fly2{to{transform:translate(8px,-16px);opacity:.2}}
 @keyframes ls-fog{to{transform:translateX(40px)}}
 @keyframes ls-aur{to{transform:translateX(-30px) scaleY(1.15)}}
-@media (prefers-reduced-motion:reduce){.ls *{animation:none!important}}
+
+/* ---------- painted pictures (art/) ---------- */
+.pl-bg{container-type:size}
+.lsx{position:absolute;inset:0;overflow:hidden}
+.lsx .stage{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:max(100cqw,calc(100cqh * 941 / 1672));aspect-ratio:941/1672}
+.lsx .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s ease}
+.lsx .bg.on{opacity:1}
+.lsx .bg[data-bg="day"]{opacity:1}
+.lsx .prop{position:absolute;object-fit:fill;opacity:0;transition:opacity 1.2s ease,filter 1.6s ease;pointer-events:none}
+.lsx .prop.on{opacity:1}.lsx .prop.dim{opacity:.3}
+.lsx.m-night .prop{filter:brightness(.42) saturate(.75) hue-rotate(12deg)}
+.lsx.m-rain .prop{filter:brightness(.82) saturate(.7)}
+.lsx.m-dusk .prop{filter:brightness(.68) saturate(.85) hue-rotate(-6deg)}
+.lsx.wet .bg[data-bg="night"]{filter:brightness(.75) saturate(.7)}
+.lsx .cloudp{-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent);animation:ls-cloudp 30s ease-in-out infinite alternate}
+.lsx.m-night .cloudp,.lsx.m-dusk .cloudp{filter:brightness(.55) saturate(.7)}
+.lsx .stage>svg.ls{position:absolute;inset:0;width:100%;height:100%}
+.lsx .ls-rain{position:absolute;inset:0;width:100%;height:100%}
+/* lake glints */
+.lsx .shimmer{position:absolute;left:0;right:0;top:67.5%;height:8%;pointer-events:none}
+.lsx .shimmer i{position:absolute;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);opacity:0;animation:ls-glint 5s ease-in-out infinite}
+.lsx .shimmer i:nth-child(1){left:12%;width:22%;top:12%;animation-delay:0s}
+.lsx .shimmer i:nth-child(2){left:55%;width:26%;top:30%;animation-delay:1.3s}
+.lsx .shimmer i:nth-child(3){left:30%;width:18%;top:52%;animation-delay:2.4s}
+.lsx .shimmer i:nth-child(4){left:62%;width:14%;top:70%;animation-delay:3.3s}
+.lsx .shimmer i:nth-child(5){left:8%;width:16%;top:84%;animation-delay:4.1s}
+.lsx.m-night .shimmer i{background:linear-gradient(90deg,transparent,rgba(230,240,255,.8),transparent)}
+.lsx.m-night .shimmer i:nth-child(2),.lsx.m-night .shimmer i:nth-child(4){left:52%}
+/* the code-drawn scenery is replaced by the pictures; only the small animated props stay */
+.ls.img>:not(.L):not(defs){display:none}
+.ls.img .fireflies,.ls.img .flowers,.ls.img .grass{transform:translateY(0)}
+@keyframes ls-cloudp{to{transform:translateX(6%)}}
+@keyframes ls-glint{0%,100%{opacity:0;transform:translateX(-10px)}50%{opacity:.7;transform:translateX(10px)}}
+.lsx.waves .shimmer i{height:3px;animation-duration:2.6s;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent)}
+@media (prefers-reduced-motion:reduce){.ls *,.lsx *{animation:none!important}}
