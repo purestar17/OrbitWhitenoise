@@ -1,95 +1,134 @@
 /* Layered flat landscape (js/landscape.js). Colours come from the mode classes. */
-.ls{position:absolute;inset:0;width:100%;height:100%;display:block}
-.ls *{transition:fill 1.4s ease,stop-color 1.4s ease,opacity 1.2s ease,stroke 1.4s ease}
+.ls,.ls-rain{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.ls *{transition:fill 1.6s ease,stop-color 1.6s ease,opacity 1.2s ease,stroke 1.6s ease}
 
-/* palettes */
-.ls.day{--sk1:#a9dde3;--sk2:#d6efec;--sk3:#eef6e4;--orb:#fff6d8;--og:#fff3c0;--mf:#9fcfcd;--snow:#eef8f5;--snowo:1;--mm:#6fb2a6;--tl:#3f8f7e;--g1:#7cc27a;--g2:#5aa964;--t1:#2e6d55;--t2:#3d8a63;--trunk:#5b4636;--water:#7ccfd0;--wl:#d8f4f2;--cloud:#ffffff;--cloudo:.95;--staro:0}
-.ls.night{--sk1:#071c26;--sk2:#14505a;--sk3:#4fa39a;--orb:#f3f1d9;--og:#cfeee0;--mf:#2f7a78;--snow:#8fc9c0;--snowo:.35;--mm:#22605f;--tl:#1a4b4c;--g1:#123b3d;--g2:#0c2c2f;--t1:#0b2627;--t2:#113436;--trunk:#0b2223;--water:#3b8f8a;--wl:#8fd6cc;--cloud:#2b5a62;--cloudo:.5;--staro:1}
-.ls.day.grey{--sk1:#8a9ea8;--sk2:#aebdc2;--sk3:#c9d3d2;--orb:#dfe5e3;--og:#ffffff;--mf:#86a1a2;--snow:#d6e1df;--mm:#618886;--tl:#46706a;--g1:#5f9a72;--g2:#4c855f;--t1:#2b5747;--t2:#376b55;--water:#86aeb0;--wl:#c9dedd;--cloud:#c3ccce;--cloudo:.95}
-.ls.night.grey{--sk1:#06121a;--sk2:#16323b;--sk3:#2e545a;--mf:#26494c;--mm:#1b3c3e;--tl:#14302f;--staro:.15;--cloud:#1d353b;--cloudo:.8}
+/* ---------- palettes ---------- */
+.ls.day{--sk1:#a8dce4;--sk2:#d4efec;--sk3:#f3f7e6;--hg:#fffbe6;--og:#fff7d6;--orb:#fffaf0;--crater:#fffaf0;
+  --m1:#bcdcd9;--m1s:#7fb0ad;--m2:#93c8bd;--m2s:#5e9f94;--snow:#f6fbf9;--snowo:1;--hz:#e8f4ef;
+  --fA:#5fa792;--g1:#93d08a;--fB:#3f8c6c;--g2:#68b46d;--gt:#4f9c5a;--t1:#4f9f72;--t2:#2c6c53;--bu1:#58a865;--bu2:#7cc276;
+  --w1:#9fe0dc;--w2:#5fb6bb;--wl:#effcfa;--cw:#ffffff;--cs:#d9eaee;--clo:1;--staro:0;--fog:#f2f8f6}
+.ls.night{--sk1:#05161e;--sk2:#0e434b;--sk3:#3f9a8d;--hg:#9ff0d4;--og:#d8f5e8;--orb:#f2f4e4;--crater:#dfe6d6;
+  --m1:#3f8d86;--m1s:#2b6d69;--m2:#2c716d;--m2s:#1f5856;--snow:#a4dccf;--snowo:.4;--hz:#3d958a;
+  --fA:#1e5756;--g1:#18484a;--fB:#123b3d;--g2:#0f3336;--gt:#164446;--t1:#174a4b;--t2:#0c2d2f;--bu1:#123c3e;--bu2:#1a4d4e;
+  --w1:#3f9f96;--w2:#22706d;--wl:#b0f3e4;--cw:#2f6d72;--cs:#23565c;--clo:.45;--staro:1;--fog:#5ba59a}
+.ls.day.grey{--sk1:#8c9fa8;--sk2:#b3c3c6;--sk3:#d3dcda;--hg:#eef2f0;--og:#ffffff;--orb:#e7ecea;
+  --m1:#a6b8b8;--m1s:#869c9d;--m2:#82a09e;--m2s:#668584;--snow:#e7eded;--hz:#c9d4d3;
+  --fA:#557f75;--g1:#76a57e;--fB:#3e6c5b;--g2:#5c8f66;--gt:#4c7f58;--t1:#40775f;--t2:#2a5546;--bu1:#4f8560;--bu2:#679a71;
+  --w1:#9bbabc;--w2:#6e979a;--wl:#dde9e9;--cw:#c3cdd0;--cs:#a7b4b8;--fog:#e3eaea}
+.ls.night.grey{--sk1:#040d12;--sk2:#112c35;--sk3:#2b5258;--hg:#4f8584;--og:#a7c6c0;--orb:#c9d3cf;
+  --m1:#2d5457;--m1s:#213f41;--m2:#21423f;--m2s:#163231;--snow:#6f9893;--hz:#2b4f54;
+  --fA:#153636;--g1:#13353a;--fB:#0e2b2c;--g2:#0b2427;--gt:#123234;--t1:#123a3b;--t2:#0a2526;
+  --w1:#2f6f6c;--w2:#1d4c4b;--wl:#7fbab2;--cw:#1c363c;--cs:#142a2f;--staro:.12;--fog:#3b5f63}
 
 .ls .sk1{stop-color:var(--sk1)}.ls .sk2{stop-color:var(--sk2)}.ls .sk3{stop-color:var(--sk3)}
-.ls .og{stop-color:var(--og)}
-.ls .orbc{fill:var(--orb)}
-.ls.grey .orb{opacity:.25}
-.ls .star{fill:#fff;opacity:var(--staro)}
+.ls .hg{stop-color:var(--hg)}.ls .og{stop-color:var(--og)}.ls .hz{stop-color:var(--hz)}
+.ls .w1{stop-color:var(--w1)}.ls .w2{stop-color:var(--w2)}
+.ls .orbc{fill:var(--orb)}.ls .crater{fill:var(--crater);opacity:0}
+.ls.night .crater{opacity:.6}
+.ls.grey .orb{opacity:.2}
 .ls .stars{opacity:var(--staro)}
+.ls .star{fill:#fff}
 .ls .star.tw{animation:ls-tw 3.5s ease-in-out infinite}
-.ls .clouds path{fill:var(--cloud);opacity:var(--cloudo)}
-.ls .cl{animation:ls-drift 40s ease-in-out infinite alternate}
-.ls .mf{fill:var(--mf)}.ls .snow{fill:var(--snow);opacity:var(--snowo)}
-.ls .mm{fill:var(--mm)}.ls .tl{fill:var(--tl)}
-.ls .g1{fill:var(--g1)}.ls .g2{fill:var(--g2)}
-.ls .t1{fill:var(--t1)}.ls .t2{fill:var(--t2)}.ls .trunk{fill:var(--trunk)}
-.ls .water{fill:var(--water)}
-.ls .wv path,.ls .wl{stroke:var(--wl);stroke-width:3;stroke-linecap:round;fill:none;opacity:.7}
-.ls .wv{animation:ls-wave 6s ease-in-out infinite alternate}
+.ls .clouds{opacity:var(--clo)}
+.ls .cw{fill:var(--cw)}.ls .cs{fill:var(--cs)}
+.ls .cl{animation:ls-drift 50s ease-in-out infinite alternate}
+.ls .m1{fill:var(--m1)}.ls .m1s{fill:var(--m1s);opacity:.75}
+.ls .m2{fill:var(--m2)}.ls .m2s{fill:var(--m2s);opacity:.7}
+.ls .snow{fill:var(--snow);opacity:var(--snowo)}
+.ls .fA{fill:var(--fA)}.ls .fB{fill:var(--fB)}
+.ls .g0,.ls .g1{fill:var(--g1)}.ls .g2{fill:var(--g2)}
+.ls .gt{fill:var(--gt)}.ls .gt2{fill:var(--t1)}
+.ls .t1{fill:var(--t1)}.ls .t2{fill:var(--t2)}
+.ls .bu1{fill:var(--bu1)}.ls .bu2{fill:var(--bu2)}
+.ls .refl{fill:var(--m2);opacity:.28}
+.ls .wv path,.ls .wl{stroke:var(--wl);stroke-width:2.4;stroke-linecap:round;fill:none;opacity:.75}
+.ls .wv{animation:ls-wave 7s ease-in-out infinite alternate}
+.ls .shadow{fill:#000;opacity:.16}
 
-/* switchable layers */
+/* ---------- switchable layers ---------- */
 .ls [data-l]{opacity:0}
 .ls [data-l].on{opacity:1}
 .ls [data-l].dim{opacity:.3}
 
-.ls .stormcloud path{fill:#3d4f58;opacity:.85}
-.ls.night .stormcloud path{fill:#0e1d24}
+.ls .stormcloud path{fill:#52646d;opacity:.9}.ls .stormcloud .sc2{fill:#3e4f58}
+.ls.night .stormcloud path{fill:#0f1f26}.ls.night .stormcloud .sc2{fill:#0a161b}
 .ls .bolt .flash{fill:#fff;opacity:0}
-.ls .bolt .bl{fill:#fff6c2;opacity:0}
-.ls .bolt.go .flash{animation:ls-flash 1.1s ease-out}
-.ls .bolt.go .bl{animation:ls-bolt 1.1s ease-out}
+.ls .bolt .blg{opacity:0}
+.ls .bolt .bl{fill:#fff8d0}.ls .bolt .bl.blur{fill:#e9f0ff}
+.ls .bolt.go .flash{animation:ls-flash 1.2s ease-out}
+.ls .bolt.go .blg{animation:ls-bolt 1.2s ease-out}
 
-.ls .rainr{animation:ls-rain .5s linear infinite}
-.ls .rain2 .rainr{animation-duration:.38s}
-.ls .drop{stroke:#e6f2f5;stroke-width:1.6;stroke-linecap:round;opacity:.55}
+.ls .fog{fill:var(--fog);opacity:.55}
+.ls .fog.f2{opacity:.4}
+.ls .mist g{animation:ls-fog 18s ease-in-out infinite alternate}
 
-.ls .pud{fill:var(--water);opacity:.8}
-.ls .rp{fill:none;stroke:var(--wl);stroke-width:2;animation:ls-ripple 2s ease-out infinite}
+.ls .pud{fill:var(--w2);opacity:.85}
+.ls .rp{fill:none;stroke:var(--wl);stroke-width:1.6;animation:ls-ripple 2.4s ease-out infinite}
 .ls .ripple.go .rp{animation:ls-ripple 2s ease-out}
 
-.ls .wall{fill:#8a5a3c}.ls .roof{fill:#5b3a2a}.ls .chim{fill:#6b4a3a}.ls .door{fill:#4a2e22}
-.ls .win{fill:#ffd577}.ls .frame{stroke:#6b4a3a;stroke-width:2}
-.ls.night .wall{fill:#3a2c26}.ls.night .roof{fill:#241a16}.ls.night .door{fill:#1c1411}.ls.night .chim{fill:#2b201b}
-.ls .smoke circle{fill:#e8eef0;opacity:.45;animation:ls-smoke 6s ease-in-out infinite}
-.ls .smoke circle:nth-child(2){animation-delay:-2s}.ls .smoke circle:nth-child(3){animation-delay:-4s}
+/* cabin */
+.ls .wall{fill:#a8724c}.ls .logs{stroke:#8a5c3c;stroke-width:2}.ls .gable{fill:#8e5d3f}
+.ls .roof{fill:#5a3b2c}.ls .chim{fill:#7d5a48}.ls .chimc{fill:#5a3b2c}.ls .door{fill:#5b3a2a}.ls .knob{fill:#e7c27a}
+.ls .win{fill:#ffd57a}.ls .frame{stroke:#7a4f36;stroke-width:2.4}
+.ls .wglow{opacity:0}
+.ls.night .wglow,.ls.grey .wglow{opacity:1}
+.ls.night .wall{fill:#4a3428}.ls.night .gable{fill:#3c2a20}.ls.night .roof{fill:#22160f}.ls.night .door{fill:#1e130d}.ls.night .chim{fill:#33241b}.ls.night .logs{stroke:#3a281e}
+.ls .smoke circle{fill:#eef3f4;opacity:.5;animation:ls-smoke 7s ease-in-out infinite}
+.ls.night .smoke circle{fill:#7d9a9b}
+.ls .smoke circle:nth-child(2){animation-delay:-2.3s}.ls .smoke circle:nth-child(3){animation-delay:-4.6s}
 
-.ls .tentb{fill:#e9a64f}.ls .tento{fill:#5a3a1e}.ls.night .tentb{fill:#a8642a}.ls.night .tento{fill:#ffcf7a}
-.ls .tline{stroke:#5a3a1e;stroke-width:3}
+/* tent */
+.ls .tentb{fill:#f0ae5a}.ls .tents{fill:#d68a3e}.ls .tento{fill:#6a4022}.ls .tentf{fill:#f6c47d}.ls .tentp{fill:#6a4022}
+.ls .tline{stroke:#e9dcc4;stroke-width:1.2;opacity:.7}
+.ls.night .tentb{fill:#b56c32}.ls.night .tents{fill:#8f5226}.ls.night .tento{fill:#ffd27a}.ls.night .tentf{fill:#c57a3c}
+.ls.grey .tento{fill:#ffcf7a}
 
-.ls .log{stroke:#5a3a22;stroke-width:9;stroke-linecap:round}
-.ls .fl1{fill:#ff9a3c;transform-origin:330px 924px;animation:ls-flick .5s ease-in-out infinite alternate}
-.ls .fl2{fill:#ffe08a;transform-origin:330px 924px;animation:ls-flick .35s ease-in-out infinite alternate-reverse}
-.ls .glow{animation:ls-glow 1.6s ease-in-out infinite alternate}
+/* campfire */
+.ls .stones ellipse{fill:#8a949a}.ls.night .stones ellipse{fill:#3a4a4f}
+.ls .log{stroke:#6b4429;stroke-width:10;stroke-linecap:round}.ls .logend{fill:#c99a6a}
+.ls .fl1{fill:#ff7a2f;transform-origin:330px 922px;animation:ls-flick .6s ease-in-out infinite alternate}
+.ls .fl2{fill:#ffa63c;transform-origin:330px 918px;animation:ls-flick .45s ease-in-out infinite alternate-reverse}
+.ls .fl3{fill:#ffe48a;transform-origin:330px 912px;animation:ls-flick .3s ease-in-out infinite alternate}
+.ls .glow{animation:ls-glow 1.8s ease-in-out infinite alternate}
+.ls .spark{fill:#ffd27a;animation:ls-spark 3.2s ease-out infinite;opacity:0}
 
-.ls .br{stroke:var(--trunk);stroke-width:7;stroke-linecap:round;fill:none}
-.ls .sw{transform-origin:120px 522px;animation:ls-sway 3s ease-in-out infinite alternate}
-.ls .str{stroke:#c9b98f;stroke-width:1.2}.ls .cap{stroke:#8a6a3a;stroke-width:5;stroke-linecap:round}.ls .bar{fill:#d8c58a}
+/* chime, owl, birds, flowers, grass, fireflies, aurora */
+.ls .br{stroke:#5d4636;stroke-width:6;stroke-linecap:round;fill:none}
+.ls.night .br{stroke:#0e2627}
+.ls .leaf{fill:var(--t1)}
+.ls .sw{transform-origin:110px 600px;animation:ls-sway 3.2s ease-in-out infinite alternate}
+.ls .str{stroke:#cbbd95;stroke-width:1.2}.ls .cap{stroke:#8a6a3a;stroke-width:5;stroke-linecap:round}
+.ls .bar{fill:#e2cf90}.ls .paper{fill:#f5f0e2}
+.ls .owb{fill:#6b4b34}.ls .owbelly{fill:#a07a58}.ls .eyer{fill:#3a281c}.ls .eye{fill:#ffd166}.ls .pupil{fill:#1a120c}.ls .beak{fill:#e0a54a}
+.ls.night .owb{fill:#2a2a26}.ls.night .owbelly{fill:#4a4438}.ls.night .eyer{fill:#151513}
+.ls .ow{transform-origin:500px 690px;animation:ls-owl 9s ease-in-out infinite}
+.ls .birds path{fill:#2f5960;transform-origin:0 0;animation:ls-flap .9s ease-in-out infinite alternate}
+.ls.night .birds path{fill:#cfe8e3}
+.ls .birds{animation:ls-fly 34s ease-in-out infinite alternate}
+.ls .fw0{fill:#ffffff}.ls .fw1{fill:#ffb6c4}.ls .fw2{fill:#ffd166}.ls .fwc{fill:#f3b53d}.ls .stem{stroke:var(--t1);stroke-width:1.5}
+.ls.night .flowers{filter:brightness(.45)}
+.ls .fly{animation:ls-fly2 4s ease-in-out infinite alternate}
+.ls.day .fireflies.on{opacity:.3}
+.ls .au{animation:ls-aur 10s ease-in-out infinite alternate}.ls .au2{animation-duration:14s}
+.ls.day .aurora.on{opacity:.45}
 
-.ls .owb{fill:#3b2c22}.ls.night .owb{fill:#0a1a1b}.ls .eye{fill:#ffd166}
-
-.ls .birds path{fill:none;stroke:#244b52;stroke-width:3;stroke-linecap:round;animation:ls-flap 1.4s ease-in-out infinite alternate}
-.ls.night .birds path{stroke:#cfe8e3}
-.ls .birds{animation:ls-fly 30s linear infinite alternate}
-.ls .fw0{fill:#ffffff}.ls .fw1{fill:#ffb3c1}.ls .fw2{fill:#ffd166}
-.ls.night .flowers{filter:brightness(.4)}
-
-.ls .grass path{stroke:var(--t2);stroke-width:3;fill:none;stroke-linecap:round}
-.ls .fly{fill:#e9ff9a;animation:ls-fly2 4s ease-in-out infinite alternate}
-.ls.day .fireflies.on{opacity:.25}
-
-.ls .au{animation:ls-aur 9s ease-in-out infinite alternate}.ls .au2{animation-duration:13s}
-.ls.day .aurora.on{opacity:.35}
+.ls-rain{z-index:0}
 
 @keyframes ls-tw{50%{opacity:.25}}
 @keyframes ls-drift{to{transform:translateX(var(--dx))}}
-@keyframes ls-wave{to{transform:translateX(18px)}}
-@keyframes ls-rain{to{transform:translate(-20px,120px)}}
-@keyframes ls-flash{0%{opacity:0}8%{opacity:.7}16%{opacity:.1}24%{opacity:.5}100%{opacity:0}}
-@keyframes ls-bolt{0%{opacity:0}6%{opacity:1}30%{opacity:1}100%{opacity:0}}
-@keyframes ls-ripple{from{rx:6;ry:2;opacity:1}to{rx:80;ry:16;opacity:0}}
-@keyframes ls-smoke{0%{transform:translateY(10px);opacity:0}30%{opacity:.5}100%{transform:translate(14px,-40px);opacity:0}}
-@keyframes ls-flick{to{transform:scale(.92,1.08) skewX(3deg)}}
-@keyframes ls-glow{to{opacity:.75}}
-@keyframes ls-sway{to{transform:rotate(6deg)}}
-@keyframes ls-flap{to{transform:scaleY(.4)}}
-@keyframes ls-fly{to{transform:translate(60px,-30px)}}
-@keyframes ls-fly2{to{transform:translate(8px,-14px);opacity:.25}}
+@keyframes ls-wave{to{transform:translateX(16px)}}
+@keyframes ls-flash{0%{opacity:0}6%{opacity:.6}14%{opacity:.08}22%{opacity:.45}100%{opacity:0}}
+@keyframes ls-bolt{0%{opacity:0}5%{opacity:1}35%{opacity:.9}100%{opacity:0}}
+@keyframes ls-ripple{from{rx:6px;ry:1.5px;opacity:1}to{rx:64px;ry:12px;opacity:0}}
+@keyframes ls-smoke{0%{transform:translateY(14px) scale(.6);opacity:0}30%{opacity:.5}100%{transform:translate(18px,-46px) scale(1.4);opacity:0}}
+@keyframes ls-flick{to{transform:scale(.93,1.07) skewX(2deg)}}
+@keyframes ls-glow{to{opacity:.7}}
+@keyframes ls-spark{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(12px,-90px)}}
+@keyframes ls-sway{to{transform:rotate(5deg)}}
+@keyframes ls-owl{0%,40%,100%{transform:rotate(0)}45%,60%{transform:rotate(-8deg)}}
+@keyframes ls-flap{to{transform:scaleY(.35)}}
+@keyframes ls-fly{to{transform:translate(70px,-40px)}}
+@keyframes ls-fly2{to{transform:translate(8px,-16px);opacity:.2}}
+@keyframes ls-fog{to{transform:translateX(40px)}}
 @keyframes ls-aur{to{transform:translateX(-30px) scaleY(1.15)}}
+@media (prefers-reduced-motion:reduce){.ls *{animation:none!important}}
