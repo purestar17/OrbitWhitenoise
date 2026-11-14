@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "rain", "name": "비" },
+    { "id": "water", "name": "물" },
+    { "id": "nature", "name": "숲·자연" },
+    { "id": "fire", "name": "불" },
+    { "id": "life", "name": "도시·생활" },
+    { "id": "noise", "name": "노이즈" }
+  ],
+  "sounds": [
+    { "id": "rain-grass", "name": "풀밭에 내리는 빗소리", "category": "rain", "file": "rain-grass.mp3", "scene": "rain", "color": "#7fb2c4", "interval": "loop", "volume": 70 },
+    { "id": "rain-tent", "name": "텐트에 내리는 빗소리", "category": "rain", "file": "rain-tent.mp3", "scene": "tent", "color": "#ffb86b", "interval": "loop", "volume": 70 },
+    { "id": "rain-heavy", "name": "거센 빗소리", "category": "rain", "file": "rain-heavy.mp3", "scene": "storm", "color": "#9fb4ff", "interval": "loop", "volume": 60 },
+    { "id": "thunder", "name": "천둥", "category": "rain", "file": "thunder.mp3", "scene": "thunder", "color": "#c9b6ff", "interval": "range", "min": 30, "max": 150, "volume": 55 },
+    { "id": "stream", "name": "시냇물 소리", "category": "water", "file": "stream.mp3", "scene": "stream", "color": "#7bd88f", "interval": "loop", "volume": 50 },
+    { "id": "waves", "name": "파도 소리", "category": "water", "file": "waves.mp3", "scene": "wave", "color": "#6fc3df", "interval": "loop", "volume": 60 },
+    { "id": "drip", "name": "물방울", "category": "water", "file": "drip.mp3", "scene": "under", "color": "#5ee1e6", "interval": "range", "min": 3, "max": 15, "volume": 35 },
+    { "id": "wind", "name": "숲 바람", "category": "nature", "file": "wind.mp3", "scene": "forest", "color": "#a6d98a", "interval": "loop", "volume": 50 },
+    { "id": "birds", "name": "새소리", "category": "nature", "file": "birds.mp3", "scene": "birds", "color": "#ff7eb6", "interval": "range", "min": 8, "max": 40, "volume": 50 },
+    { "id": "crickets", "name": "여름밤 풀벌레", "category": "nature", "file": "crickets.mp3", "scene": "cricket", "color": "#b4f07a", "interval": "loop", "volume": 40 },
+    { "id": "owl", "name": "올빼미", "category": "nature", "file": "owl.mp3", "scene": "night", "color": "#d7b98a", "interval": "range", "min": 40, "max": 180, "volume": 40 },
+    { "id": "campfire", "name": "모닥불", "category": "fire", "file": "campfire.mp3", "scene": "fire", "color": "#ff8a4a", "interval": "loop", "volume": 45 },
+    { "id": "crackle", "name": "장작 튀는 소리", "category": "fire", "file": "crackle.mp3", "scene": "fireplace", "color": "#ffc04a", "interval": "range", "min": 4, "max": 20, "volume": 40 },
+    { "id": "cafe", "name": "카페 소음", "category": "life", "file": "cafe.mp3", "scene": "cafe", "color": "#e0a873", "interval": "loop", "volume": 45 },
+    { "id": "clock", "name": "시계 초침", "category": "life", "file": "clock.mp3", "scene": "clock", "color": "#f2ead8", "interval": "loop", "volume": 35 },
+    { "id": "chime", "name": "풍경 소리", "category": "life", "file": "chime.mp3", "scene": "chime", "color": "#c792ff", "interval": "range", "min": 20, "max": 90, "volume": 40 },
+    { "id": "noise-white", "name": "화이트 노이즈", "category": "noise", "file": "noise-white.mp3", "scene": "white", "color": "#e6e6e6", "interval": "loop", "volume": 40 },
+    { "id": "noise-pink", "name": "핑크 노이즈", "category": "noise", "file": "noise-pink.mp3", "scene": "pink", "color": "#ff9fb8", "interval": "loop", "volume": 45 },
+    { "id": "noise-brown", "name": "브라운 노이즈", "category": "noise", "file": "noise-brown.mp3", "scene": "brown", "color": "#c08a5a", "interval": "loop", "volume": 50 }
+  ]
+}

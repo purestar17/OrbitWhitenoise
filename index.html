@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ORBIT · 화이트 노이즈</title>
+<meta name="description" content="빗소리, 파도, 모닥불 같은 소리를 섞어 나만의 집중·수면용 사운드를 만드는 앱">
+<meta name="theme-color" content="#081525">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="css/scenes.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="v-fixed" viewBox="0 0 24 24"><path d="M3 12h18"/><circle cx="14" cy="12" r="2.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="v-range" viewBox="0 0 24 24"><path d="M3 5h18M3 19h18" stroke-dasharray="2 2.4"/><path d="M3 12c2.2-4 3.8-4 6 0s3.8 4 6 0 3.8-4 6 0"/></symbol>
+  <symbol id="v-full" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M12 12c-2-2.6-3.5-4-5.5-4a4 4 0 0 0 0 8c2 0 3.5-1.4 5.5-4zm0 0c2 2.6 3.5 4 5.5 4a4 4 0 0 0 0-8c-2 0-3.5 1.4-5.5 4z"/></symbol>
+  <symbol id="i-fixed" viewBox="0 0 24 24"><path d="M3 18h18"/><path d="M5 18V8M12 18V8M19 18V8"/></symbol>
+  <symbol id="i-range" viewBox="0 0 24 24"><path d="M3 6v12M21 6v12" stroke-dasharray="2 2.4"/><path d="M7 18v-8M10.5 18v-11M16 18v-7"/><path d="M5 18h14"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M3 7h3.5c3 0 4.5 10 7.5 10H21M3 17h3.5c1.4 0 2.4-2 3.3-4.2M14.2 11.2C15 9 16 7 17.5 7H21"/><path d="M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+  <symbol id="f-in" viewBox="0 0 24 24"><path d="M3 19L19 5v14z"/></symbol>
+  <symbol id="f-out" viewBox="0 0 24 24"><path d="M5 5l16 14H5z"/></symbol>
+  <symbol id="ic-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="logo"><i></i>ORBIT</div>
+  <label class="search"><svg class="ico"><use href="#ic-search"/></svg><input id="search" type="search" placeholder="음원 검색" autocomplete="off"></label>
+</header>
+<nav class="pager" id="pager">
+  <button data-page="0">나의 믹스</button>
+  <button data-page="1" class="on">라이브러리</button>
+</nav>
+<main id="main">
+  <section id="left" class="pane"></section>
+  <section id="right" class="pane">
+    <div class="tabs" id="tabs"></div>
+    <div class="lib" id="lib"></div>
+  </section>
+</main>
+<div id="toast" class="toast" role="status"></div>
+<div id="modal" class="modal" hidden></div>
+<input type="file" id="file" accept="audio/*" multiple hidden>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

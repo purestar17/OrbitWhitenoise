@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORBIT 관리자 · 기본 음원 관리</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/scenes.css">
+<style>
+:root{--acc:#5ee1c6;--line:#16304a;--line2:#2a4560;--txt:#dbe7f5;--mut:#6f8aa8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#06101c;color:var(--txt);padding:28px 20px 80px}
+.wrap{max-width:1000px;margin:0 auto}
+h1{font-size:22px;color:#fff;margin-bottom:6px}
+h2{font-size:15px;color:#fff;margin:30px 0 12px}
+p,li{font-size:13px;color:var(--mut);line-height:1.7}
+ol{padding-left:20px;margin:8px 0}
+code{background:#0b1b2c;padding:1px 6px;border-radius:5px;color:var(--acc);font-size:12px}
+.box{background:#0b1b2c;border:1px solid var(--line);border-radius:14px;padding:18px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mut)}
+input,select{background:#06101c;border:1px solid var(--line2);border-radius:9px;padding:9px 10px;color:#fff;font:inherit;font-size:13px}
+input[type=color]{padding:2px;height:38px}
+button{font:inherit;cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:13px;background:#12263a;color:#fff}
+button.pri{background:var(--acc);color:#06101c;font-weight:700}
+button.del{background:none;color:#ff8a8a;padding:4px 8px}
+.acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
+.preview{display:flex;gap:14px;align-items:center;margin-top:14px}
+.preview .card{width:180px;aspect-ratio:1.38;border-radius:12px;position:relative;overflow:hidden}
+.preview .card img,.preview .card .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.preview .card span{position:absolute;left:10px;bottom:8px;font-weight:700;color:#fff;font-size:13px;text-shadow:0 1px 6px #000;z-index:2}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:500;font-size:12px}
+td .sw{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px}
+td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:cover}
+.new{color:var(--acc);font-size:11px}
+.dl a{display:inline-block;margin:4px 8px 4px 0;color:var(--acc);font-size:13px}
+.msg{font-size:13px;color:var(--acc);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ORBIT 관리자 · 기본 음원 관리</h1>
+  <p>앱에 기본으로 들어가는 음원을 추가·수정·삭제하는 페이지예요. 이 페이지는 메뉴에 노출되지 않고 주소(<code>/admin.html</code>)로만 들어올 수 있어요.</p>
+
+  <h2>1. 새 음원 추가</h2>
+  <div class="box">
+    <div class="form">
+      <label>이름<input id="f-name" placeholder="예: 대나무 숲 바람"></label>
+      <label>분류<select id="f-cat"></select></label>
+      <label>새 분류 만들기 (선택)<input id="f-newcat" placeholder="예: 동물"></label>
+      <label>오디오 파일 (mp3 권장)<input id="f-audio" type="file" accept="audio/*"></label>
+      <label>사진 (선택, jpg/png/webp)<input id="f-image" type="file" accept="image/*"></label>
+      <label>사진이 없을 때 쓸 그림<select id="f-scene"></select></label>
+      <label>대표 색<input id="f-color" type="color" value="#5ee1c6"></label>
+      <label>기본 재생 간격<select id="f-int"><option value="loop">∞ 지속 (배경음)</option><option value="range">범위 랜덤 (효과음)</option><option value="fixed">정해진 간격</option><option value="full">완전 랜덤</option></select></label>
+      <label>범위 최소 (초)<input id="f-min" type="number" value="10" min="1" max="1800"></label>
+      <label>범위 최대 / 정해진 간격 (초)<input id="f-max" type="number" value="60" min="1" max="1800"></label>
+      <label>기본 볼륨 (1~100)<input id="f-vol" type="number" value="60" min="1" max="100"></label>
+    </div>
+    <div class="preview"><div class="card" id="pv"><div class="art scene s-mine"></div><span>미리보기</span></div><audio id="pa" controls></audio></div>
+    <div class="acts"><button class="pri" id="add">목록에 추가</button><span class="msg" id="msg"></span></div>
+  </div>
+
+  <h2>2. 현재 음원 목록</h2>
+  <div class="box"><table><thead><tr><th></th><th>이름</th><th>분류</th><th>파일</th><th>기본 간격</th><th>볼륨</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
+
+  <h2>3. 저장소에 올리기</h2>
+  <div class="box">
+    <p>바뀐 내용은 아직 이 브라우저에만 있어요. 아래 파일들을 내려받아 GitHub 저장소에 올리면 모든 사용자에게 반영돼요.</p>
+    <div class="dl" id="dl"></div>
+    <div class="acts"><button class="pri" id="dlm">manifest.json 내려받기</button></div>
+    <ol>
+      <li>GitHub 저장소에서 <code>sounds</code> 폴더로 들어가 <b>Add file → Upload files</b>를 누릅니다.</li>
+      <li>내려받은 <code>manifest.json</code>과 새 오디오 파일을 끌어다 놓습니다. (기존 manifest.json을 덮어씁니다)</li>
+      <li>사진이 있으면 <code>sounds/images</code> 폴더에 같은 방법으로 올립니다.</li>
+      <li>아래 <b>Commit changes</b>를 누르면 1~2분 뒤 앱에 반영돼요.</li>
+    </ol>
+  </div>
+</div>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

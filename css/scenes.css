@@ -1,0 +1,24 @@
+/* Placeholder artwork drawn with CSS gradients.
+   Each sound points to one of these with "scene" in sounds/manifest.json.
+   When a sound has an "image", the photo is shown instead. */
+.scene{background-color:#1a2a3a;background-size:cover;background-position:center}
+.s-rain{background:repeating-linear-gradient(105deg,#ffffff00 0 9px,#ffffff22 9px 10px),linear-gradient(#5d7a7a,#2f4d3f 60%,#1d3326)}
+.s-tent{background:repeating-linear-gradient(105deg,#ffffff00 0 11px,#ffffff1a 11px 12px),conic-gradient(from 180deg at 50% 0%,#6b4a2a 0 150deg,#b8c4c0 150deg 210deg,#6b4a2a 210deg)}
+.s-storm{background:repeating-linear-gradient(100deg,#ffffff00 0 6px,#ffffff2a 6px 7px),linear-gradient(#2a3448,#3a4a66 50%,#1a2230)}
+.s-thunder{background:linear-gradient(115deg,transparent 47%,#fff6c0 48% 50%,transparent 51%),radial-gradient(ellipse at 50% 20%,#8a7ab8,transparent 60%),linear-gradient(#2a2440,#141228)}
+.s-stream{background:radial-gradient(ellipse at 50% 100%,#cfe8f0aa 0 18%,transparent 19%),repeating-linear-gradient(90deg,#2d5a2a 0 8px,#4f8a3c 8px 20px,#7bb35a 20px 26px)}
+.s-wave{background:repeating-radial-gradient(ellipse at 50% 140%,#9fb4bc 0 3px,#6d8792 3px 14px),linear-gradient(#a9bcc4,#6d8792)}
+.s-under{background:repeating-radial-gradient(ellipse at 50% -40%,#3ee0e0 0 4px,#0e8a92 4px 18px),linear-gradient(#18c4c4,#064c5a)}
+.s-forest{background:radial-gradient(ellipse at 50% 0%,#f4ffd088,transparent 55%),repeating-linear-gradient(90deg,#1b2f17 0 8px,#2e5226 8px 26px,#16260f 26px 30px,#3f6b30 30px 46px)}
+.s-birds{background:radial-gradient(circle at 30% 30%,#2a1a10 0 3px,transparent 4px),radial-gradient(circle at 60% 22%,#2a1a10 0 3px,transparent 4px),linear-gradient(#fbe5b8,#d6c08a 50%,#5b7a3a)}
+.s-cricket{background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 30%,#fff 0 1px,transparent 2px),radial-gradient(circle at 45% 12%,#fff 0 1.5px,transparent 2px),linear-gradient(#0e1a3a,#1b2d4a 55%,#1e3a24)}
+.s-night{background:radial-gradient(circle at 72% 26%,#f6eccc 0 9%,transparent 10%),radial-gradient(circle at 20% 18%,#fff 0 1px,transparent 2px),linear-gradient(#0a1230,#1a2448 60%,#0e1a14)}
+.s-fire{background:radial-gradient(ellipse at 50% 80%,#fff2a0 0,#ff9a2a 18%,#c0400a 34%,transparent 55%),linear-gradient(#120a06,#2a140a)}
+.s-fireplace{background:radial-gradient(ellipse at 50% 85%,#ffd27a 0,#ff7a1a 20%,transparent 40%),linear-gradient(90deg,#3a2a22 0 18%,#120a06 18% 82%,#3a2a22 82%)}
+.s-cafe{background:radial-gradient(circle at 20% 30%,#ffcf8a88 0 8px,transparent 10px),radial-gradient(circle at 75% 25%,#ffb36a88 0 12px,transparent 14px),radial-gradient(circle at 55% 45%,#ffe0a888 0 6px,transparent 8px),linear-gradient(#4a3020,#2a1a10)}
+.s-clock{background:radial-gradient(circle at 50% 48%,#f2ead8 0 26%,#6a4a2a 27% 30%,transparent 31%),linear-gradient(#3a2a1a,#1a120a)}
+.s-chime{background:linear-gradient(90deg,transparent 30%,#d8c8ff 30% 33%,transparent 33% 46%,#d8c8ff 46% 49%,transparent 49% 62%,#d8c8ff 62% 65%,transparent 65%) 0 0/100% 70% no-repeat,linear-gradient(#3a2a5a,#1a1430)}
+.s-white{background:repeating-conic-gradient(#ddd 0 25%,#aaa 0 50%) 0 0/3px 3px}
+.s-pink{background:repeating-conic-gradient(#e8b4c0 0 25%,#b07a8a 0 50%) 0 0/4px 4px}
+.s-brown{background:repeating-conic-gradient(#8a6040 0 25%,#5a3a20 0 50%) 0 0/5px 5px}
+.s-mine{background:radial-gradient(circle at 70% 30%,#5ee1c655,transparent 50%),repeating-linear-gradient(90deg,#5ee1c622 0 2px,transparent 2px 9px),linear-gradient(#123a44,#0a1a24)}
