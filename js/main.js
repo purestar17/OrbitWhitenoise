@@ -1,4 +1,5 @@
 import { Engine } from './engine.js';
+import { Landscape, layersFor } from './landscape.js';
 import {
   defaultTrack, newMix, uid, fmtSec, fmtShort, parseTime, logPos, posLog, snapSec, intervalLabel, MAX_INT,
   loadMixes, saveMixes, loadCurrent, saveCurrent, loadLast, saveLast,
@@ -21,6 +22,7 @@ const S = {
 };
 const MINE = { id: 'mine', name: '내 음원' };
 const buffers = new Map();
+const land = new Landscape();
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,6 +53,8 @@ engine.on((ev) => {
   if (ev.type === 'hit') {
     const th = $(`.k[data-uid="${ev.uid}"] .th`);
     if (th) { th.classList.remove('hit'); void th.offsetWidth; th.classList.add('hit'); }
+    const t = trackBy(ev.uid);
+    if (t && !t.muted) land.hit(soundOf(t)?.scene);
   }
   if (ev.type === 'error') toast(`"${S.sounds.get(ev.soundId)?.name || ev.soundId}" 음원을 불러오지 못했어요`);
 });
@@ -169,7 +173,7 @@ function renderPlayer() {
   const m = S.current;
   $('#left').innerHTML = `
     <div class="player">
-      <div class="pl-bg">${art(bgSound(m), 'scene')}<div class="shade"></div></div>
+      <div class="pl-bg"><div class="shade"></div></div>
       <div class="pl-in">
         <div class="pl-top">
           <button class="chip" data-act="tomixes"><svg class="ico"><use href="#ic-list"/></svg>나의 믹스</button>
@@ -192,6 +196,7 @@ function renderPlayer() {
     </div>`;
   renderTimer();
   $$('.k.op').forEach(initCardSliders);
+  refreshBg();
 }
 
 function fillHTML(t) {
@@ -633,8 +638,8 @@ left.addEventListener('change', (e) => {
 function refreshBg() {
   const bg = $('.pl-bg');
   if (!bg) return;
-  const html = `${art(bgSound(S.current), 'scene')}<div class="shade"></div>`;
-  if (bg.innerHTML !== html) bg.innerHTML = html;
+  land.mount(bg);
+  land.set(layersFor(S.current.tracks, (id) => S.sounds.get(id)));
 }
 
 // card header: tap = expand, horizontal drag = volume
