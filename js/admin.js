@@ -21,7 +21,9 @@ async function load() {
   measureLibrary();
 }
 function renderCats(sel) {
-  $('#f-cat').innerHTML = manifest.categories.map((c) => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  $('#f-cat').innerHTML = manifest.categories.map((c) => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('')
+    + '<option value="__new">+ 새 분류 추가</option>';
+  syncCat();
 }
 const pendingBlob = (name) => pending.find((p) => p.name === name)?.blob;
 const imageURL = (s) => { const b = pendingBlob(s.image); return b ? URL.createObjectURL(b) : `sounds/${s.image}`; };
@@ -48,6 +50,12 @@ $('#dlm').addEventListener('click', () => {
   a.download = 'manifest.json';
   a.click();
 });
+function syncCat() {
+  const isNew = $('#f-cat').value === '__new';
+  $('#f-newcat').hidden = !isNew;
+  if (isNew) $('#f-newcat').focus();
+}
+$('#f-cat').addEventListener('change', syncCat);
 function msg(t) { $('#msg').textContent = t; }
 function dmsg(t) { $('#dmsg').textContent = t; }
 function clampN(v, a, b, d) { v = Math.round(+v); return Number.isFinite(v) ? Math.min(b, Math.max(a, v)) : d; }
@@ -221,8 +229,6 @@ function openEditor(index) {
   $('#f-vol').value = s.volume ?? 60;
   $('#f-audio').value = '';
   $('#f-image').value = '';
-  $('#f-audio-now').textContent = index == null ? '' : `(지금: ${s.file})`;
-  $('#f-image-now').textContent = s.image ? `(지금: ${s.image.split('/').pop()})` : '';
   $('#v-db').value = 0; $('#v-dbv').textContent = '0 dB'; $('#v-warn').textContent = '';
   $('#lc-wv').hidden = true; $('#lc-info').textContent = '';
   dmsg('');
@@ -230,8 +236,24 @@ function openEditor(index) {
   preview();
   $('#ov').hidden = false;
   document.body.classList.add('lock');
-  if (index != null) loadAudio(pendingBlob(s.file) || `sounds/${s.file}`);
-  else showTools();
+  if (index != null) {
+    const me = ed;
+    showTools('불러오는 중…');
+    fileFor(s.file, 'sounds/' + s.file).then((f) => {
+      if (ed !== me) return;
+      setPicker('#f-audio', f);
+      loadAudio(f);
+    }).catch(() => loadAudio(`sounds/${s.file}`));
+    if (s.image) fileFor(s.image, 'sounds/' + s.image).then((f) => { if (ed === me) setPicker('#f-image', f); }).catch(() => {});
+  } else showTools();
+}
+// the sound's current file as a File, so the file picker shows it as chosen
+async function fileFor(name, url) {
+  const blob = pendingBlob(name) || await (await fetch(url)).blob();
+  return new File([blob], name.split('/').pop(), { type: blob.type });
+}
+function setPicker(sel, file) {
+  try { const dt = new DataTransfer(); dt.items.add(file); $(sel).files = dt.files; } catch { /* older browsers: picker stays empty */ }
 }
 function closeEditor() {
   if (ed?.dirty && !confirm('바꾼 내용을 저장하지 않고 닫을까요?')) return;
@@ -392,10 +414,12 @@ $('#save').addEventListener('click', async () => {
   stopPlay();
   const btn = $('#save');
   btn.disabled = true;
+  btn.classList.add('busy');
   try {
     const s = ed.index == null ? { id: 's' + Date.now().toString(36) } : { ...manifest.sounds[ed.index] };
     let cat = $('#f-cat').value;
-    const newCat = $('#f-newcat').value.trim();
+    const newCat = cat === '__new' ? $('#f-newcat').value.trim() : '';
+    if (cat === '__new' && !newCat) throw new Error('cat');
     if (newCat) {
       const found = manifest.categories.find((c) => c.name === newCat);
       cat = found ? found.id : 'cat' + Date.now().toString(36);
@@ -433,9 +457,10 @@ $('#save').addEventListener('click', async () => {
     renderList();
     msg(`"${name}" 저장했어요. 아래에서 파일을 내려받아 올려 주세요.`);
   } catch (e) {
-    dmsg(e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
+    dmsg(e.message === 'cat' ? '새 분류 이름을 넣어 주세요' : e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
   } finally {
     btn.disabled = false;
+    btn.classList.remove('busy');
     btn.textContent = '저장';
   }
 });
