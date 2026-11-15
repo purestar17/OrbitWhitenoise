@@ -118,7 +118,7 @@ input{font:inherit;color:inherit}
 .k{border-radius:14px;background:#0b1b2ccc;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid transparent;margin-bottom:8px;overflow:hidden;transition:border-color .2s,box-shadow .2s;box-shadow:0 1px 1px #000c}
 .k:hover{border-color:color-mix(in srgb,var(--c) 70%,transparent)}
 .k{position:relative}
-.k .hd{z-index:1;transition:transform .2s ease}
+.k .hd{z-index:1;transition:transform .2s ease;-webkit-touch-callout:none}
 .k.drag .hd{transition:none}
 .k .swdel{position:absolute;left:0;top:0;width:76px;height:52px;background:var(--danger);color:#06101c;font-size:13px;font-weight:700;display:none}
 .k.sw .swdel{display:block}
@@ -173,11 +173,13 @@ input{font:inherit;color:inherit}
 /* interval area keeps one height whatever the mode, so nothing below jumps */
 .ib{height:44px}
 .ib .note{padding-top:4px}
-.fr{display:flex;align-items:center;gap:8px;font-size:12px;color:#8ea4bb;margin-bottom:2px}
-.fr .ico{width:17px;height:17px}
-.fr>span:not(.val){width:28px;flex:none}
-.fr .sl{flex:1}
-.fr .val{margin-left:0;min-width:52px;text-align:right}
+.fds{display:flex;gap:10px}
+.fr{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;color:#8ea4bb;background:#06101c;border:1px solid #1a3550;border-radius:9px;padding:2px 4px 2px 8px}
+.fr .ico{width:16px;height:16px}
+.fr>span:not(.val){flex:none}
+.fr .sl{flex:1;min-width:30px;margin:0 9px}
+.fr .val{margin-left:0;flex:none;padding:3px 4px;text-align:right}
+.fr .val input{width:44px}
 .fnote{margin-top:4px}
 .note{font-size:11px;color:var(--mut);line-height:1.55}
 .fd{display:flex;gap:8px}

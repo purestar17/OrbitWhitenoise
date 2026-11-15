@@ -263,7 +263,7 @@ function bodyHTML(t) {
     </div>
     <div class="crow">
       <div class="rh"><b>페이드</b></div>
-      ${['in', 'out'].map((w) => `<div class="fr"><svg class="ico"><use href="#f-${w}"/></svg><span>${w === 'in' ? '인' : '아웃'}</span><div class="sl" data-sl="fade-${w}"></div><span class="val ed" data-act="editfade" data-w="${w}">${fadeText(t.fade[w])}</span></div>`).join('')}
+      <div class="fds">${['in', 'out'].map((w) => `<div class="fr"><svg class="ico"><use href="#f-${w}"/></svg><span>${w === 'in' ? '인' : '아웃'}</span><div class="sl" data-sl="fade-${w}"></div><span class="val ed" data-act="editfade" data-w="${w}">${fadeText(t.fade[w])}</span></div>`).join('')}</div>
       <p class="note fnote"${i.mode === 'loop' ? '' : ' style="visibility:hidden"'}>계속 재생에서는 켜고 끌 때만 페이드돼요.</p>
     </div>
     <div class="foot"><button data-act="remove">믹스에서 빼기</button></div>
@@ -668,43 +668,55 @@ function refreshBg() {
 
 // card header: tap = expand, horizontal drag = volume
 let hdDrag = null;
+// card header: tap = expand, horizontal drag = volume, long press (touch) = show "삭제"
+const LONG_MS = 500;
 left.addEventListener('pointerdown', (e) => {
   const hd = e.target.closest('.k .hd');
   if (!hd || e.target.closest('button')) return;
   const u = hd.parentElement.dataset.uid;
   const t = trackBy(u);
-  const touch = e.pointerType !== 'mouse';
-  hdDrag = { hd, u, t, x0: e.clientX, y0: e.clientY, moved: false, start: structuredClone(t.volume), id: e.pointerId, touch, base: S.swiped === u ? SWIPE : 0, dx: 0 };
+  const d = hdDrag = { hd, u, t, x0: e.clientX, y0: e.clientY, moved: false, start: structuredClone(t.volume), id: e.pointerId, wasOpen: S.swiped === u };
+  if (e.pointerType !== 'mouse' && !d.wasOpen) {
+    d.timer = setTimeout(() => {
+      if (hdDrag !== d || d.moved) return;
+      d.long = true;
+      openSwipe(u);
+      navigator.vibrate?.(15);
+    }, LONG_MS);
+  }
 });
-// a card swiped open closes when anything else is touched
-const SWIPE = 76;
+// an open "삭제" closes when anything else is touched
 left.addEventListener('pointerdown', (e) => {
-  if (!S.swiped || e.target.closest(`.k[data-uid="${S.swiped}"]`)) return;
+  if (!S.swiped || e.target.closest(`.k[data-uid="${S.swiped}"] .swdel`)) return;
+  if (e.target.closest(`.k[data-uid="${S.swiped}"] .hd`)) return; // handled on release
   closeSwipe();
 }, true);
+left.addEventListener('contextmenu', (e) => { if (e.target.closest('.k .hd')) e.preventDefault(); });
+function openSwipe(u) {
+  if (S.swiped && S.swiped !== u) closeSwipe();
+  const k = $(`.k[data-uid="${u}"]`);
+  if (!k) return;
+  S.swiped = u;
+  k.classList.add('sw');
+  requestAnimationFrame(() => k.classList.add('open'));
+}
 function closeSwipe() {
   const k = S.swiped && $(`.k[data-uid="${S.swiped}"]`);
   S.swiped = null;
   if (!k) return;
   k.classList.remove('open');
-  $('.hd', k).style.transform = '';
   setTimeout(() => { if (!k.classList.contains('open')) k.classList.remove('sw'); }, 220);
 }
 left.addEventListener('pointermove', (e) => {
-  if (!hdDrag || e.pointerId !== hdDrag.id) return;
+  if (!hdDrag || e.pointerId !== hdDrag.id || hdDrag.long) return;
   const dx = e.clientX - hdDrag.x0, dy = e.clientY - hdDrag.y0;
   if (!hdDrag.moved) {
-    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { hdDrag = null; return; }
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(hdDrag.timer); hdDrag = null; return; }
     if (Math.abs(dx) < 6) return;
     hdDrag.moved = true;
+    clearTimeout(hdDrag.timer);
+    if (hdDrag.wasOpen) closeSwipe();
     hdDrag.hd.setPointerCapture(e.pointerId);
-  }
-  if (hdDrag.touch) {
-    const k = hdDrag.hd.parentElement, w = hdDrag.hd.offsetWidth;
-    hdDrag.dx = clamp(hdDrag.base + dx, 0, w);
-    k.classList.add('sw', 'drag');
-    hdDrag.hd.style.transform = `translateX(${hdDrag.dx}px)`;
-    return;
   }
   const v = hdDrag.t.volume;
   const r = hdDrag.hd.getBoundingClientRect();
@@ -720,24 +732,15 @@ left.addEventListener('pointermove', (e) => {
 });
 const hdEnd = (e) => {
   if (!hdDrag || e.pointerId !== hdDrag.id) return;
-  const { u, moved, touch, hd, dx, base } = hdDrag;
+  const { u, moved, long, wasOpen, timer } = hdDrag;
+  clearTimeout(timer);
   hdDrag = null;
-  if (touch && (moved || base)) {
-    const k = hd.parentElement;
-    k.classList.remove('drag');
-    if (!moved) { closeSwipe(); return; } // tap on an open card closes it
-    if (dx > hd.offsetWidth * 0.6) { // long swipe: delete right away
-      hd.style.transform = `translateX(${hd.offsetWidth}px)`;
-      setTimeout(() => $('.swdel', k)?.click(), 160);
-      return;
-    }
-    if (dx > SWIPE / 2) { if (S.swiped && S.swiped !== u) closeSwipe(); S.swiped = u; k.classList.add('open'); hd.style.transform = ''; }
-    else { S.swiped = u; closeSwipe(); }
-    return;
-  }
+  if (long) return; // the long press just showed "삭제"
   if (moved) {
     persist();
     if (S.open === u) rerenderCard(u);
+  } else if (wasOpen) {
+    closeSwipe(); // a tap on a card showing "삭제" just hides it
   } else {
     const prev = S.open;
     S.open = S.open === u ? null : u;
@@ -748,7 +751,7 @@ const hdEnd = (e) => {
 left.addEventListener('pointerup', hdEnd);
 left.addEventListener('pointercancel', (e) => {
   if (hdDrag?.id !== e.pointerId) return;
-  if (hdDrag.touch) { hdDrag.hd.parentElement.classList.remove('drag'); if (S.swiped !== hdDrag.u) { hdDrag.hd.style.transform = ''; hdDrag.hd.parentElement.classList.remove('sw'); } else hdDrag.hd.style.transform = ''; }
+  clearTimeout(hdDrag.timer);
   hdDrag = null;
 });
 
