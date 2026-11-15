@@ -8,49 +8,66 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/scenes.css">
 <style>
-:root{--acc:#5ee1c6;--line:#16304a;--line2:#2a4560;--txt:#dbe7f5;--mut:#6f8aa8}
+:root{--acc:#5ee1c6;--line:#16304a;--line2:#2a4560;--txt:#dbe7f5;--mut:#6f8aa8;--bg:#06101c;--box:#0b1b2c}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#06101c;color:var(--txt);padding:28px 20px 80px}
+[hidden]{display:none!important}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:28px 20px 80px}
+body.lock{overflow:hidden}
 .wrap{max-width:1000px;margin:0 auto}
 h1{font-size:22px;color:#fff;margin-bottom:6px}
-h2{font-size:15px;color:#fff;margin:30px 0 12px}
+h2{font-size:15px;color:#fff}
+.sec{display:flex;align-items:center;gap:10px;margin:30px 0 12px}.sec .sp{flex:1}
 p,li{font-size:13px;color:var(--mut);line-height:1.7}
 ol{padding-left:20px;margin:8px 0}
-code{background:#0b1b2c;padding:1px 6px;border-radius:5px;color:var(--acc);font-size:12px}
-.box{background:#0b1b2c;border:1px solid var(--line);border-radius:14px;padding:18px}
-.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+code{background:var(--box);padding:1px 6px;border-radius:5px;color:var(--acc);font-size:12px}
+.box{background:var(--box);border:1px solid var(--line);border-radius:14px;padding:18px;overflow-x:auto}
+table{min-width:560px}
 label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mut)}
-input,select{background:#06101c;border:1px solid var(--line2);border-radius:9px;padding:9px 10px;color:#fff;font:inherit;font-size:13px}
+input,select{background:var(--bg);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;color:#fff;font:inherit;font-size:13px}
 input[type=color]{padding:2px;height:38px}
-button{font:inherit;cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:13px;background:#12263a;color:#fff}
-button.pri{background:var(--acc);color:#06101c;font-weight:700}
-button.del{background:none;color:#ff8a8a;padding:4px 8px}
-.acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
-.preview{display:flex;gap:14px;align-items:center;margin-top:14px}
-.preview .card{width:180px;aspect-ratio:1.38;border-radius:12px;position:relative;overflow:hidden}
-.preview .card img,.preview .card .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.preview .card span{position:absolute;left:10px;bottom:8px;font-weight:700;color:#fff;font-size:13px;text-shadow:0 1px 6px #000;z-index:2}
+input[type=range]{padding:0;border:none;background:none;accent-color:var(--acc)}
+button{font:inherit;cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:13px;background:#12263a;color:#fff;white-space:nowrap}
+button.pri{background:var(--acc);color:var(--bg);font-weight:700}
+button.del{background:none;color:#ff8a8a}
+button:disabled{opacity:.55;cursor:wait}
+button.plus{width:38px;height:38px;padding:0;border-radius:50%;font-size:22px;line-height:38px;background:var(--acc);color:var(--bg);font-weight:700}
+.msg{font-size:13px;color:var(--acc)}
+/* list */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
 th{color:var(--mut);font-weight:500;font-size:12px}
+tbody tr{cursor:pointer}tbody tr:hover td{background:#0f2337}
 td .sw{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px}
-td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:cover}
-.new{color:var(--acc);font-size:11px}
+td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:cover;background-position:center}
+.tag{color:var(--acc);font-size:11px;margin-left:4px}
 .dl a{display:inline-block;margin:4px 8px 4px 0;color:var(--acc);font-size:13px}
-.msg{font-size:13px;color:var(--acc);margin-top:10px}
-button.lp{background:none;color:var(--acc);padding:4px 8px;white-space:nowrap}
-.lc{margin-top:14px;border:1px solid var(--line2);border-radius:12px;padding:14px;background:#06101c}
-.lc-hd{display:flex;gap:8px;align-items:center;margin-bottom:10px}.lc-hd b{color:#fff;font-size:13px}.lc-hd .sp{flex:1}
-.lc-wv{position:relative;height:90px;border-radius:8px;background:#0b1b2c;overflow:hidden}
-.lc-wv canvas{width:100%;height:100%;display:block}
-.lc-wv i{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:0;opacity:.8}
-.lc-wv span{position:absolute;top:6px;font-size:11px;color:var(--mut)}.lc-wv .l{left:8px}.lc-wv .r{right:8px}
-.lc p{margin-top:8px}
-.lc-mk,.lc-made{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--mut)}
-.lc-mk label{flex-direction:row;align-items:center;gap:8px;font-size:13px}.lc-mk b{color:#fff;min-width:36px}
-.lc-mk input[type=range]{padding:0;width:140px;accent-color:var(--acc)}
-.lc-made{background:#0b1b2c;border-radius:10px;padding:10px 12px;color:var(--txt)}.lc-made .sp{flex:1}
-button:disabled{opacity:.6;cursor:wait}
+/* modal */
+.ov{position:fixed;inset:0;background:#02070dcc;display:flex;align-items:flex-start;justify-content:center;padding:30px 14px;overflow:auto;z-index:10}
+.ov[hidden]{display:none}
+.dlg{width:100%;max-width:780px;background:var(--box);border:1px solid var(--line2);border-radius:16px;padding:20px 20px 16px;position:relative}
+.dlg-hd{display:flex;align-items:center;gap:10px;margin-bottom:16px}.dlg-hd h3{font-size:17px;color:#fff}.dlg-hd .sp{flex:1}
+.x{background:none;font-size:20px;padding:4px 10px;color:var(--mut)}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.top{display:grid;grid-template-columns:180px 1fr;gap:18px;margin-bottom:16px}
+@media (max-width:640px){.top{grid-template-columns:1fr}}
+.card{width:180px;aspect-ratio:1.38;border-radius:12px;position:relative;overflow:hidden;background:#000}
+.card img,.card .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card span{position:absolute;left:10px;bottom:8px;font-weight:700;color:#fff;font-size:13px;text-shadow:0 1px 6px #000;z-index:2}
+.small{font-size:11px;color:var(--mut)}
+.int-row{display:flex;gap:10px}.int-row label{flex:1}
+.tools{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+.tools h4{font-size:14px;color:#fff;margin-bottom:4px}
+.tool{background:var(--bg);border:1px solid var(--line2);border-radius:12px;padding:14px;margin-top:12px}
+.tool-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#fff;font-weight:700}.tool-hd .sp{flex:1}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mut)}
+.row b{color:#fff}
+.wv{position:relative;height:70px;border-radius:8px;background:var(--box);overflow:hidden;margin:8px 0}
+.wv canvas{width:100%;height:100%;display:block}
+.wv i{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:0;opacity:0}
+.wv i.on{opacity:.85}
+.wv span{position:absolute;top:5px;font-size:11px;color:var(--mut)}.wv .l{left:8px}.wv .r{right:8px}
+.state{font-size:12px;color:var(--acc);margin-top:6px}
+.foot{display:flex;gap:8px;align-items:center;margin-top:18px;flex-wrap:wrap}.foot .sp{flex:1}
 .credit{margin-top:30px;font-size:11px}
 </style>
 </head>
@@ -59,49 +76,71 @@ button:disabled{opacity:.6;cursor:wait}
   <h1>ORBIT 관리자 · 기본 음원 관리</h1>
   <p>앱에 기본으로 들어가는 음원을 추가·수정·삭제하는 페이지예요. 이 페이지는 메뉴에 노출되지 않고 주소(<code>/admin.html</code>)로만 들어올 수 있어요.</p>
 
-  <h2>1. 새 음원 추가</h2>
-  <div class="box">
-    <div class="form">
-      <label>이름<input id="f-name" placeholder="예: 대나무 숲 바람"></label>
-      <label>분류<select id="f-cat"></select></label>
-      <label>새 분류 만들기 (선택)<input id="f-newcat" placeholder="예: 동물"></label>
-      <label>오디오 파일 (mp3 권장)<input id="f-audio" type="file" accept="audio/*"></label>
-      <label>사진 (선택, jpg/png/webp)<input id="f-image" type="file" accept="image/*"></label>
-      <label>사진이 없을 때 쓸 그림<select id="f-scene"></select></label>
-      <label>대표 색<input id="f-color" type="color" value="#5ee1c6"></label>
-      <label>기본 재생 간격<select id="f-int"><option value="loop">∞ 지속 (배경음)</option><option value="range">범위 랜덤 (효과음)</option><option value="fixed">정해진 간격</option><option value="full">완전 랜덤</option></select></label>
-      <label>범위 최소 (초)<input id="f-min" type="number" value="10" min="1" max="1800"></label>
-      <label>범위 최대 / 정해진 간격 (초)<input id="f-max" type="number" value="60" min="1" max="1800"></label>
-      <label>기본 볼륨 (1~100)<input id="f-vol" type="number" value="60" min="1" max="100"></label>
-    </div>
-    <div class="preview"><div class="card" id="pv"><div class="art scene s-mine"></div><span>미리보기</span></div><audio id="pa" controls></audio></div>
-    <div class="acts"><button id="f-loop">🔁 seamless loop 확인하기</button><button class="pri" id="add">목록에 추가</button><span class="msg" id="msg"></span></div>
-    <div class="lc" id="lc" hidden>
-      <div class="lc-hd"><b id="lc-title"></b><span class="sp"></span><button id="lc-play">■ 멈추기</button><button id="lc-close">닫기</button></div>
-      <div class="lc-wv"><canvas id="lc-wave"></canvas><i id="lc-head"></i><span class="l">끝 3초</span><span class="r">처음 3초</span></div>
-      <p id="lc-info"></p>
-      <div class="lc-mk"><span>이음새가 어색하면</span><label>겹치는 길이 <input type="range" id="lc-xf" min="0.5" max="5" step="0.5" value="2"> <b id="lc-xfv">2.0초</b></label><button class="pri" id="lc-make">✨ 매끄럽게 만들기</button></div>
-      <div class="lc-made" id="lc-made" hidden><span id="lc-made-info"></span><span class="sp"></span><button class="pri" id="lc-use">이 파일로 바꾸기</button><button id="lc-dl">⬇ 내려받기</button></div>
-    </div>
-  </div>
+  <div class="sec"><h2>음원 목록</h2><span class="small">음원을 누르면 수정할 수 있어요</span><span class="sp"></span><span class="msg" id="msg"></span><button class="plus" id="add" title="새 음원 추가">+</button></div>
+  <div class="box"><table><thead><tr><th></th><th>이름</th><th>분류</th><th>파일</th><th>기본 간격</th><th>볼륨</th></tr></thead><tbody id="list"></tbody></table></div>
 
-  <h2>2. 현재 음원 목록</h2>
-  <div class="box"><table><thead><tr><th></th><th>이름</th><th>분류</th><th>파일</th><th>기본 간격</th><th>볼륨</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
-
-  <h2>3. 저장소에 올리기</h2>
+  <div class="sec"><h2>저장소에 올리기</h2></div>
   <div class="box">
-    <p>바뀐 내용은 아직 이 브라우저에만 있어요. 아래 파일들을 내려받아 GitHub 저장소에 올리면 모든 사용자에게 반영돼요.</p>
+    <p>바뀐 내용은 아직 이 브라우저에만 있어요. 아래 파일들을 내려받아 GitHub 저장소에 올리면 모든 사용자에게 반영돼요. (이 페이지를 새로고침하면 바뀐 내용이 사라져요)</p>
     <div class="dl" id="dl"></div>
-    <div class="acts"><button class="pri" id="dlm">manifest.json 내려받기</button></div>
+    <div class="row" style="margin-top:10px"><button class="pri" id="dlm">manifest.json 내려받기</button></div>
     <ol>
-      <li>배경음(∞ 지속)은 올리기 전에 "seamless loop 확인하기"로 이음새를 들어 보세요.</li>
       <li>GitHub 저장소에서 <code>sounds</code> 폴더로 들어가 <b>Add file → Upload files</b>를 누릅니다.</li>
-      <li>내려받은 <code>manifest.json</code>과 새 오디오 파일을 끌어다 놓습니다. (기존 manifest.json을 덮어씁니다)</li>
+      <li>내려받은 <code>manifest.json</code>과 새 오디오 파일을 끌어다 놓습니다. (같은 이름의 파일은 덮어씁니다)</li>
       <li>사진이 있으면 <code>sounds/images</code> 폴더에 같은 방법으로 올립니다.</li>
       <li>아래 <b>Commit changes</b>를 누르면 1~2분 뒤 앱에 반영돼요.</li>
     </ol>
   </div>
   <p class="credit">MP3 변환: <a href="https://lame.sourceforge.io" style="color:var(--mut)">LAME</a> (lamejs, LGPL) · vendor/lame.min.js</p>
+</div>
+
+<div class="ov" id="ov" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <div class="dlg-hd"><h3 id="dlg-title">음원 수정</h3><span class="sp"></span><button class="x" id="close" aria-label="닫기">✕</button></div>
+
+    <div class="top">
+      <div><div class="card" id="pv"></div><p class="small" style="margin-top:6px">라이브러리에 보이는 모습</p></div>
+      <div class="form">
+        <label>이름<input id="f-name" placeholder="예: 대나무 숲 바람"></label>
+        <label>분류<select id="f-cat"></select></label>
+        <label>새 분류 만들기 (선택)<input id="f-newcat" placeholder="예: 동물"></label>
+        <label>대표 색<input id="f-color" type="color" value="#5ee1c6"></label>
+      </div>
+    </div>
+    <div class="form">
+      <label>오디오 파일 <span class="small" id="f-audio-now"></span><input id="f-audio" type="file" accept="audio/*"></label>
+      <label>사진 (선택) <span class="small" id="f-image-now"></span><input id="f-image" type="file" accept="image/*"></label>
+      <label>사진이 없을 때 쓸 그림<select id="f-scene"></select></label>
+      <label>기본 재생 간격<select id="f-int"><option value="loop">∞ 지속 (배경음)</option><option value="range">범위 랜덤 (효과음)</option><option value="fixed">정해진 간격</option><option value="full">완전 랜덤</option></select></label>
+      <div class="int-row" id="int-range"><label>최소 (초)<input id="f-min" type="number" min="1" max="1800"></label><label>최대 (초)<input id="f-max" type="number" min="1" max="1800"></label></div>
+      <label id="int-fixed">간격 (초)<input id="f-val" type="number" min="1" max="1800"></label>
+      <label>앱에서의 기본 볼륨 (1~100)<input id="f-vol" type="number" min="1" max="100"></label>
+    </div>
+
+    <div class="tools" id="tools">
+      <h4>음원 편집</h4>
+      <p>편집한 결과는 "저장"을 누를 때 새 MP3 파일로 만들어져요. 원래 파일은 그대로 있어요.</p>
+      <div class="wv"><canvas id="wv-all"></canvas><i id="wv-all-head"></i></div>
+      <div class="row"><button id="t-play">▶ 처음부터 듣기</button><span id="t-len"></span><span class="sp" style="flex:1"></span><button id="t-reset" hidden>↺ 원래 파일로 되돌리기</button></div>
+      <div class="state" id="t-state"></div>
+
+      <div class="tool">
+        <div class="tool-hd">🔊 음원 볼륨 키우기·줄이기</div>
+        <div class="row">지금 크기 <b id="v-now">-</b><span>· 다른 기본 음원들의 평균 <b id="v-avg">계산 중…</b></span></div>
+        <div class="row" style="margin-top:8px"><label style="flex-direction:row;align-items:center;gap:8px">바꿀 양 <input type="range" id="v-db" min="-18" max="18" step="0.5" value="0" style="width:200px"></label><b id="v-dbv">0 dB</b><span id="v-warn" style="color:#ffb86b"></span></div>
+        <div class="row" style="margin-top:8px"><button id="v-match">평균에 맞추기</button><button id="v-prev">▶ 바꾼 크기로 들어보기</button><button class="pri" id="v-apply">적용</button></div>
+      </div>
+
+      <div class="tool">
+        <div class="tool-hd">🔁 seamless loop</div>
+        <div class="row"><button id="lc-play">▶ 이음새 듣기 (끝 3초 → 처음 3초)</button><span id="lc-info"></span></div>
+        <div class="wv" id="lc-wv" hidden><canvas id="lc-wave"></canvas><i id="lc-head"></i><span class="l">끝 3초</span><span class="r">처음 3초</span></div>
+        <div class="row" style="margin-top:8px"><label style="flex-direction:row;align-items:center;gap:8px">겹치는 길이 <input type="range" id="lc-xf" min="0.5" max="5" step="0.5" value="2" style="width:140px"></label><b id="lc-xfv">2.0초</b><button class="pri" id="lc-make">✨ 매끄럽게 만들기</button></div>
+      </div>
+    </div>
+
+    <div class="foot"><button class="del" id="delete">이 음원 삭제</button><span class="sp"></span><span class="msg" id="dmsg"></span><button id="cancel">취소</button><button class="pri" id="save">저장</button></div>
+  </div>
 </div>
 <script type="module" src="js/admin.js"></script>
 </body>
