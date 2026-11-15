@@ -238,16 +238,41 @@ function toggleTracks() {
   const b = $('.tbar');
   if (b) { b.classList.toggle('off', S.tracksHidden); b.setAttribute('aria-expanded', !S.tracksHidden); }
 }
-const mvolHTML = (on) => `<div class="mvol${on ? ' on' : ''}"><svg class="ico"><use href="#ic-vol"/></svg><div class="sl" data-sl="master"></div><span class="mv">${S.volume}%</span></div>`;
+// overall volume: speaker icon follows the level and mutes / restores on tap
+const volIcon = (v) => (v === 0 ? 'ic-mute' : v < 50 ? 'ic-vol1' : 'ic-vol');
+const mvolHTML = (on) => `<div class="mvol${on ? ' on' : ''}"><button class="mvi" data-act="mvmute" aria-label="${S.volume ? '음소거' : '소리 켜기'}"><svg class="ico"><use href="#${volIcon(S.volume)}"/></svg></button><div class="sl" data-sl="master"></div><span class="mv">${S.volume}%</span></div>`;
+function showMasterVol() {
+  $$('.mvol').forEach((m) => {
+    $('.mv', m).textContent = `${S.volume}%`;
+    $('.mvi use', m).setAttribute('href', `#${volIcon(S.volume)}`);
+    $('.mvi', m).setAttribute('aria-label', S.volume ? '음소거' : '소리 켜기');
+  });
+}
+const saveVolume = () => { try { localStorage.setItem('orbit-volume', S.volume); } catch { /* private mode */ } };
+function setMasterVol(v) {
+  S.volume = v;
+  engine.setVolume(v / 100);
+  showMasterVol();
+}
 function initMasterVol(root = document) {
-  $$('[data-sl="master"]', root).forEach((el) => makeSlider(el, {
-    values: [S.volume],
-    toPos: (x) => x / 100,
-    fromPos: (p) => Math.round(p * 100),
-    color: '#fff',
-    onInput: ([v]) => { S.volume = v; engine.setVolume(v / 100); $$('.mvol .mv').forEach((m) => (m.textContent = `${v}%`)); },
-    onEnd: () => { try { localStorage.setItem('orbit-volume', S.volume); } catch { /* private mode */ } },
-  }));
+  $$('[data-sl="master"]', root).forEach((el) => {
+    const fresh = el.cloneNode(false); // drop old listeners
+    el.replaceWith(fresh);
+    makeSlider(fresh, {
+      values: [S.volume],
+      toPos: (x) => x / 100,
+      fromPos: (p) => Math.round(p * 100),
+      color: '#fff',
+      onInput: ([v]) => { if (v) S.prevVolume = null; setMasterVol(v); },
+      onEnd: saveVolume,
+    });
+  });
+}
+function toggleMute() {
+  if (S.volume > 0) { S.prevVolume = S.volume; setMasterVol(0); }
+  else setMasterVol(S.prevVolume || 70);
+  saveVolume();
+  initMasterVol($('#left'));
 }
 function trackHTML(t) {
   if (t.volume.mode === 'full') Object.assign(t.volume, { mode: 'range', min: 1, max: 100 }); // old mixes
@@ -693,6 +718,7 @@ left.addEventListener('click', (e) => {
     case 'timer': openTimer(); break;
     case 'sheet': break; // handled by pointer logic
     case 'tracks': toggleTracks(); break;
+    case 'mvmute': toggleMute(); break;
     case 'mixplay': {
       const id = a.dataset.id;
       if (S.current.id === id && S.current.tracks.length) { engine.playing ? pause() : play(); renderMixes(); }

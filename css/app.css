@@ -148,10 +148,12 @@ input{font:inherit;color:inherit}
 /* overall volume: shown when the list is folded, and on the now-playing bar */
 .mvol{display:flex;align-items:center;gap:12px;color:#fff;font-size:12.5px;height:0;opacity:0;overflow:hidden;flex:none;transition:height .28s cubic-bezier(.2,.8,.2,1),opacity .28s;filter:drop-shadow(0 1px 3px #0009)}
 .mvol.on{height:36px;opacity:1}
+.mvol .mvi{display:flex;align-items:center;justify-content:center;width:26px;height:26px;margin-left:-4px;border-radius:7px;color:#fff;flex:none}
+.mvol .mvi:hover{background:#ffffff1c}
 .mvol .ico{width:19px;height:19px}
 .mvol .sl{flex:1}
 .mvol .sl .tr{background:#ffffff40}
-.mvol .sl .kn{width:16px;height:16px;box-shadow:0 1px 4px #0008}
+.mvol .sl .kn{width:12px;height:12px;box-shadow:0 1px 4px #0008}
 .mvol .mv{min-width:38px;text-align:right;font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .nowbar .mvol{height:30px;margin-top:4px;filter:none}
 .tracks.off{clip-path:inset(-6px -20px 100% -20px);transform:translateY(-14px);opacity:0;visibility:hidden;pointer-events:none;transition:clip-path .28s cubic-bezier(.2,.8,.2,1),transform .28s cubic-bezier(.2,.8,.2,1),opacity .28s,visibility 0s .28s}
@@ -208,12 +210,14 @@ input{font:inherit;color:inherit}
 /* hover: thumb grows a little with a soft halo, track brightens */
 .sl .kn{transition:transform .15s,box-shadow .15s}
 .sl .tr{transition:background .15s}
+/* thumb sizes: volume / interval 12px, fades 8px, overall volume 12px */
+[data-sl="vol"] .kn,[data-sl="int"] .kn{width:12px;height:12px;box-shadow:0 0 0 2px #0b1b2c}
+.fr .sl .kn{width:8px;height:8px;box-shadow:0 0 0 2px #0b1b2c}
 @media (hover:hover){
   .sl:hover .tr{background:#24486a}
-  .sl:hover .kn{transform:translate(-50%,-50%) scale(1.15);box-shadow:0 0 0 3px #0b1b2c,0 0 0 8px #ffffff22}
+  .sl:hover .kn{transform:translate(-50%,-50%) scale(1.25)}
   .mvol .sl:hover .tr{background:#ffffff66}
-  .mvol .sl:hover .kn{box-shadow:0 1px 4px #0008,0 0 0 7px #ffffff2a}
-  .k .hd:hover .fill::after{width:10px;height:24px;box-shadow:0 0 0 4px #ffffff22,0 0 8px #0008}
+  .k .hd:hover .fill::after{width:10px;height:24px}
 }
 .k .fill::after{transition:width .15s,height .15s,box-shadow .15s}
 .ticks{position:relative;height:14px;margin-top:2px}
