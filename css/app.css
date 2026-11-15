@@ -205,6 +205,17 @@ input{font:inherit;color:inherit}
 .sl .tr{position:absolute;left:0;right:0;top:11px;height:4px;border-radius:4px;background:#1a3550}
 .sl .rg{position:absolute;top:11px;height:4px;border-radius:4px;background:var(--acc)}
 .sl .kn{position:absolute;top:13px;width:18px;height:18px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 3px #0b1b2c}
+/* hover: thumb grows a little with a soft halo, track brightens */
+.sl .kn{transition:transform .15s,box-shadow .15s}
+.sl .tr{transition:background .15s}
+@media (hover:hover){
+  .sl:hover .tr{background:#24486a}
+  .sl:hover .kn{transform:translate(-50%,-50%) scale(1.15);box-shadow:0 0 0 3px #0b1b2c,0 0 0 8px #ffffff22}
+  .mvol .sl:hover .tr{background:#ffffff66}
+  .mvol .sl:hover .kn{box-shadow:0 1px 4px #0008,0 0 0 7px #ffffff2a}
+  .k .hd:hover .fill::after{width:10px;height:24px;box-shadow:0 0 0 4px #ffffff22,0 0 8px #0008}
+}
+.k .fill::after{transition:width .15s,height .15s,box-shadow .15s}
 .ticks{position:relative;height:14px;margin-top:2px}
 .ticks i{white-space:nowrap;position:absolute;font-style:normal;font-size:9.5px;color:var(--dim);transform:translateX(-50%)}
 .ticks i:first-child{transform:none}.ticks i:last-child{transform:translateX(-100%)}
