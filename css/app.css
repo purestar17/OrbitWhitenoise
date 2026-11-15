@@ -165,7 +165,7 @@ input{font:inherit;color:inherit}
 .k.sw .hd{background:#0b1b2c}
 .k.sw.open .hd{transform:translateX(76px)}
 @media (hover:none),(pointer:coarse){.k .x{display:none}}
-.k.op{border-color:var(--c);box-shadow:0 0 26px color-mix(in srgb,var(--c) 28%,transparent);background:#0b1b2cf2}
+.k.op{border-color:var(--c);box-shadow:0 1px 1px #000c;background:#0b1b2cf2}
 .k .hd{position:relative;display:flex;align-items:center;gap:12px;height:52px;padding:0 10px 0 6px;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer}
 .k .fill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 18%,transparent),color-mix(in srgb,var(--c) 40%,transparent));border-right:2px solid var(--c);pointer-events:none;transition:width .08s,left .08s}
 .k .fill::after{content:'';position:absolute;right:-5px;top:50%;width:8px;height:20px;border-radius:4px;background:#fff;transform:translateY(-50%);box-shadow:0 0 8px #0008}
