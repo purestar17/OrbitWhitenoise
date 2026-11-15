@@ -834,12 +834,48 @@ const hdEnd = (e) => {
   } else if (wasOpen) {
     closeSwipe(); // a tap on a card showing "삭제" just hides it
   } else {
-    const prev = S.open;
-    S.open = S.open === u ? null : u;
-    if (prev && prev !== u) rerenderCard(prev);
-    rerenderCard(u);
+    const prev = S.open, opening = prev !== u;
+    S.open = opening ? u : null;
+    if (prev) closeCardAnim(prev);
+    if (opening) { rerenderCard(u); openCardAnim(u, prev ? 210 : 0); }
   }
 };
+// settings slide open / closed; opening also scrolls so the whole card is in view
+const EASE = 'cubic-bezier(.2,.8,.2,1)';
+function openCardAnim(u, wait = 0) {
+  const el = $(`.k[data-uid="${u}"]`), b = el && $('.bdy', el);
+  if (!b) return;
+  const h = b.offsetHeight, full = el.offsetHeight;
+  b.style.overflow = 'hidden';
+  b.animate([{ height: '0px', opacity: 0, paddingTop: '0px', paddingBottom: '0px' }, { height: `${h}px`, opacity: 1 }], { duration: 260, easing: EASE })
+    .onfinish = () => { b.style.overflow = ''; };
+  setTimeout(() => scrollCardIntoView(el, full), wait);
+}
+function scrollCardIntoView(el, full) {
+  const list = el.closest('.tracks');
+  if (!list) return;
+  const sheet = $('.sheet');
+  const bottom = Math.min(list.getBoundingClientRect().bottom, sheet ? sheet.getBoundingClientRect().top : Infinity) - 10;
+  const r = el.getBoundingClientRect();
+  const over = r.top + full - bottom; // the card's height once fully open
+  if (over <= 0) return;
+  // scroll along with the opening card (the list only gets taller as the card grows)
+  const dist = Math.min(over, r.top - list.getBoundingClientRect().top), from = list.scrollTop, t0 = performance.now(), D = 320;
+  const ease = (t) => 1 - (1 - t) ** 3;
+  const step = (now) => {
+    const t = Math.min(1, (now - t0) / D);
+    list.scrollTop = from + dist * ease(t);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function closeCardAnim(u) {
+  const el = $(`.k[data-uid="${u}"]`), b = el && $('.bdy', el);
+  if (!b) { rerenderCard(u); return; }
+  b.style.overflow = 'hidden';
+  b.animate([{ height: `${b.offsetHeight}px`, opacity: 1 }, { height: '0px', opacity: 0, paddingTop: '0px', paddingBottom: '0px' }], { duration: 200, easing: EASE })
+    .onfinish = () => { if (S.open !== u) rerenderCard(u); };
+}
 left.addEventListener('pointerup', hdEnd);
 left.addEventListener('pointercancel', (e) => {
   if (hdDrag?.id !== e.pointerId) return;
