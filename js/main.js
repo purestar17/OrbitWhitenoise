@@ -17,6 +17,7 @@ const S = {
   open: null,          // uid of the expanded track card
   editMixes: false,
   sheetOpen: false,
+  tracksHidden: (() => { try { return localStorage.getItem('orbit-tracks-hidden') === '1'; } catch { return false; } })(),
   timerEnd: null,
   search: '',
 };
@@ -186,7 +187,8 @@ function renderPlayer() {
           <div class="ttl"><input class="mixname" value="${esc(m.name)}" maxlength="30" aria-label="믹스 이름"><small>음원 ${m.tracks.length}개${engine.playing ? ' 재생 중' : ''}</small></div>
           <button class="tm" data-act="timer"></button>
         </div>
-        <div class="tracks">${m.tracks.length ? m.tracks.map(trackHTML).join('') : `<div class="pl-empty">${isMobile() ? '왼쪽으로 밀어 라이브러리' : '오른쪽 라이브러리'}에서 음원을 누르면<br>여기에 추가되고 바로 재생돼요.</div>`}</div>
+        <button class="tbar${S.tracksHidden ? ' off' : ''}" data-act="tracks" aria-expanded="${!S.tracksHidden}"><i></i><span>${tbarText()}</span><i></i></button>
+        <div class="tracks${S.tracksHidden ? ' off' : ''}">${m.tracks.length ? m.tracks.map(trackHTML).join('') : `<div class="pl-empty">${isMobile() ? '왼쪽으로 밀어 라이브러리' : '오른쪽 라이브러리'}에서 음원을 누르면<br>여기에 추가되고 바로 재생돼요.</div>`}</div>
       </div>
       <div class="sheet${S.sheetOpen ? ' open' : ''}">
         <div class="hdl" data-act="sheet"><i></i><span>${S.sheetOpen ? '⌄' : '⌃'} 공간 배치</span></div>
@@ -217,13 +219,21 @@ function volText(v) {
 }
 function intText(i) {
   if (i.mode === 'loop') return '끊김 없이 계속';
-  if (i.mode === 'fixed') return `${Math.round(i.value)}초마다`;
+  if (i.mode === 'fixed') return `${Math.round(i.value)}초`;
   if (i.mode === 'range') return `${Math.round(i.min)} ~ ${Math.round(i.max)}초`;
   return `1 ~ ${MAX_INT}초`;
 }
 const fadeText = (s) => `${(+s).toFixed(1)}초`;
 const FADE_MAX = 5;
 
+const tbarText = () => (S.tracksHidden ? `음원 ${S.current.tracks.length}개 펼치기 ⌄` : '음원 목록 접기 ⌃');
+function toggleTracks() {
+  S.tracksHidden = !S.tracksHidden;
+  try { localStorage.setItem('orbit-tracks-hidden', S.tracksHidden ? '1' : '0'); } catch { /* private mode */ }
+  $('.tracks')?.classList.toggle('off', S.tracksHidden);
+  const b = $('.tbar');
+  if (b) { b.classList.toggle('off', S.tracksHidden); b.setAttribute('aria-expanded', !S.tracksHidden); $('span', b).textContent = tbarText(); }
+}
 function trackHTML(t) {
   if (t.volume.mode === 'full') Object.assign(t.volume, { mode: 'range', min: 1, max: 100 }); // old mixes
   const s = soundOf(t);
@@ -266,7 +276,6 @@ function bodyHTML(t) {
       <div class="fds">${['in', 'out'].map((w) => `<div class="fr"><svg class="ico"><use href="#f-${w}"/></svg><span>${w === 'in' ? '인' : '아웃'}</span><div class="sl" data-sl="fade-${w}"></div><span class="val ed" data-act="editfade" data-w="${w}">${fadeText(t.fade[w])}</span></div>`).join('')}</div>
       <p class="note fnote"${i.mode === 'loop' ? '' : ' style="visibility:hidden"'}>계속 재생에서는 켜고 끌 때만 페이드돼요.</p>
     </div>
-    <div class="foot"><button data-act="remove">믹스에서 빼기</button></div>
   </div>`;
 }
 
@@ -634,6 +643,7 @@ left.addEventListener('click', (e) => {
     case 'share': shareMix(); break;
     case 'timer': openTimer(); break;
     case 'sheet': break; // handled by pointer logic
+    case 'tracks': toggleTracks(); break;
     case 'mute':
       t.muted = !t.muted; persist(); syncEngine(); rerenderCard(u); refreshRadar(); refreshBg(); break;
     case 'remove':

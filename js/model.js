@@ -69,7 +69,7 @@ export function snapSec(s) {
 
 export function intervalLabel(i) {
   if (i.mode === 'loop') return '∞';
-  if (i.mode === 'fixed') return `${Math.round(i.value)}초마다`;
+  if (i.mode === 'fixed') return `${Math.round(i.value)}초`;
   if (i.mode === 'range') return `${Math.round(i.min)}~${Math.round(i.max)}초`;
   return '랜덤';
 }
