@@ -21,6 +21,7 @@ export class Engine {
     this.players = new Map(); // track uid -> TrackPlayer
     this.playing = false;
     this.listeners = new Set();
+    this.volume = 1;
   }
 
   ensureContext() {
@@ -28,12 +29,23 @@ export class Engine {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC({ latencyHint: 'playback' });
       this.master = this.ctx.createGain();
-      this.master.connect(this.ctx.destination);
+      this.vol = this.ctx.createGain();
+      this.vol.gain.value = this.volume;
+      this.master.connect(this.vol).connect(this.ctx.destination);
       const l = this.ctx.listener;
       if (l.positionX) { l.positionX.value = 0; l.positionY.value = 0; l.positionZ.value = 0; }
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
+  }
+
+  // overall mix volume, 0..1 (squared so the slider feels even to the ear)
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v)) ** 2;
+    if (!this.vol) return;
+    const now = this.ctx.currentTime;
+    this.vol.gain.cancelScheduledValues(now);
+    this.vol.gain.setTargetAtTime(this.volume, now, 0.03);
   }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }

@@ -19,6 +19,8 @@ const S = {
   sheetOpen: false,
   tracksHidden: (() => { try { return localStorage.getItem('orbit-tracks-hidden') === '1'; } catch { return false; } })(),
   timerEnd: null,
+  timerLeft: null, // seconds left while paused
+  volume: (() => { try { const v = +localStorage.getItem('orbit-volume'); return v >= 0 && localStorage.getItem('orbit-volume') !== null ? v : 100; } catch { return 100; } })(),
   search: '',
 };
 const MINE = { id: 'mine', name: '내 음원' };
@@ -145,8 +147,8 @@ function renderMixes() {
   const list = [...S.mixes].sort((a, b) => (b.id === S.lastId) - (a.id === S.lastId) || b.updated - a.updated);
   $('#left').innerHTML = `
     <div class="mixes">
-      ${playing ? `<button class="nowbar" data-act="toplayer"><span class="eq"><i></i><i></i><i></i></span><span>${esc(cur.name)}</span><small>재생 중 ›</small></button>` : ''}
-      ${resume ? `<button class="nowbar" data-act="toplayer" style="background:#0b1b2c;border-color:var(--line2)"><span>▶</span><span>${esc(cur.name)}</span><small>이어 듣기 ›</small></button>` : ''}
+      ${playing ? `<div class="nowbar"><button class="nb" data-act="toplayer"><span class="eq"><i></i><i></i><i></i></span><span>${esc(cur.name)}</span><small>재생 중 ›</small></button>${mvolHTML(true)}</div>` : ''}
+      ${resume ? `<div class="nowbar" style="background:#0b1b2c;border-color:var(--line2)"><button class="nb" data-act="toplayer"><span>▶</span><span>${esc(cur.name)}</span><small>이어 듣기 ›</small></button>${mvolHTML(true)}</div>` : ''}
       <div class="hh"><span>나의 믹스 <small>${S.mixes.length}</small></span>${S.mixes.length ? `<button data-act="editmixes" class="${S.editMixes ? 'on' : ''}">${S.editMixes ? '완료' : '편집'}</button>` : ''}</div>
       ${list.map((m) => {
         const bg = bgSound(m);
@@ -160,6 +162,7 @@ function renderMixes() {
       ${!S.mixes.length ? '<p class="hint">저장한 믹스가 여기에 모여요. 라이브러리에서 음원을 눌러 조합을 만들고 "저장"을 누르세요.</p>' : ''}
       <button class="newmix" data-act="newmix">+ 새 믹스 만들기</button>
     </div>`;
+  initMasterVol($('#left'));
 }
 
 // ---------------------------------------------------------------- left: player
@@ -187,6 +190,7 @@ function renderPlayer() {
           <button class="tm" data-act="timer" aria-expanded="false"></button>
         </div>
         <button class="tbar${S.tracksHidden ? ' off' : ''}" data-act="tracks" aria-expanded="${!S.tracksHidden}" aria-label="음원 목록 접기·펼치기"><i></i><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.6 6 4.1l3.5 3.5"/></svg><i></i></button>
+        ${mvolHTML(S.tracksHidden)}
         <div class="tracks${S.tracksHidden ? ' off' : ''}">${m.tracks.length ? m.tracks.map(trackHTML).join('') : `<div class="pl-empty">${isMobile() ? '왼쪽으로 밀어 라이브러리' : '오른쪽 라이브러리'}에서 음원을 누르면<br>여기에 추가되고 바로 재생돼요.</div>`}</div>
       </div>
       <div class="sheet${S.sheetOpen ? ' open' : ''}">
@@ -196,6 +200,7 @@ function renderPlayer() {
       </div>
     </div>`;
   renderTimer();
+  initMasterVol($('#left'));
   $$('.k.op').forEach(initCardSliders);
   refreshBg();
 }
@@ -229,8 +234,20 @@ function toggleTracks() {
   S.tracksHidden = !S.tracksHidden;
   try { localStorage.setItem('orbit-tracks-hidden', S.tracksHidden ? '1' : '0'); } catch { /* private mode */ }
   $('.tracks')?.classList.toggle('off', S.tracksHidden);
+  $('.pl-in .mvol')?.classList.toggle('on', S.tracksHidden);
   const b = $('.tbar');
   if (b) { b.classList.toggle('off', S.tracksHidden); b.setAttribute('aria-expanded', !S.tracksHidden); }
+}
+const mvolHTML = (on) => `<div class="mvol${on ? ' on' : ''}"><svg class="ico"><use href="#ic-vol"/></svg><div class="sl" data-sl="master"></div><span class="mv">${S.volume}%</span></div>`;
+function initMasterVol(root = document) {
+  $$('[data-sl="master"]', root).forEach((el) => makeSlider(el, {
+    values: [S.volume],
+    toPos: (x) => x / 100,
+    fromPos: (p) => Math.round(p * 100),
+    color: '#fff',
+    onInput: ([v]) => { S.volume = v; engine.setVolume(v / 100); $$('.mvol .mv').forEach((m) => (m.textContent = `${v}%`)); },
+    onEnd: () => { try { localStorage.setItem('orbit-volume', S.volume); } catch { /* private mode */ } },
+  }));
 }
 function trackHTML(t) {
   if (t.volume.mode === 'full') Object.assign(t.volume, { mode: 'range', min: 1, max: 100 }); // old mixes
@@ -415,19 +432,15 @@ function renderTimer() {
   const el = $('.pl-title .tm');
   if (!el) return;
   const m = S.current;
-  if (S.timerEnd) {
-    const left = Math.max(0, Math.round((S.timerEnd - Date.now()) / 1000));
-    const h = Math.floor(left / 3600), mm = Math.floor((left % 3600) / 60), ss = left % 60;
-    el.classList.remove('off');
-    el.innerHTML = `수면 타이머<b>${h ? h + ':' : ''}${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>`;
-  } else {
-    el.classList.toggle('off', !m.timer);
-    el.innerHTML = m.timer ? `수면 타이머<b>${timerWords(m.timer)}</b>` : `수면 타이머<b>설정 안 함</b>`;
-  }
+  const left = S.timerEnd ? Math.max(0, Math.round((S.timerEnd - Date.now()) / 1000)) : S.timerLeft ?? (m.timer ? Math.round(m.timer * 60) : null);
+  el.classList.toggle('off', left == null);
+  if (left == null) { el.innerHTML = '수면 타이머<b>설정 안 함</b>'; return; }
+  const h = Math.floor(left / 3600), mm = Math.floor((left % 3600) / 60), ss = left % 60;
+  el.innerHTML = `수면 타이머<b>${h ? h + ':' : ''}${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>`;
 }
 setInterval(() => {
   if (S.timerEnd && Date.now() >= S.timerEnd) {
-    S.timerEnd = null;
+    S.timerEnd = null; S.timerLeft = null;
     engine.fadeOutAndPause(8);
     toast('타이머가 끝나 소리를 천천히 줄였어요');
   }
@@ -440,21 +453,20 @@ function timerWords(min) {
   return [h && `${h}시간`, m && `${m}분`, s && `${s}초`].filter(Boolean).join(' ') || '0초';
 }
 // dial-style timer: three wheels (hours, minutes, seconds) that drop down under the timer
-const ROW = 34;
+const ROW = 26;
 function closeTimer() { $('.tpop')?.remove(); $('.pl-title .tm')?.setAttribute('aria-expanded', 'false'); }
 function openTimer() {
   if ($('.tpop')) return closeTimer();
   const tm = $('.pl-title .tm');
   if (!tm) return;
-  const base = Math.round((S.timerEnd ? (S.timerEnd - Date.now()) / 60000 : S.current.timer || 30) * 60);
+  const base = S.timerEnd ? Math.round((S.timerEnd - Date.now()) / 1000) : S.timerLeft ?? Math.round((S.current.timer || 30) * 60);
   const init = [Math.min(12, Math.floor(base / 3600)), Math.floor((base % 3600) / 60), base % 60];
   const col = (max, i) => `<div class="wh" data-i="${i}">${Array.from({ length: max + 1 }, (_, n) => `<b data-n="${n}">${String(n).padStart(2, '0')}</b>`).join('')}</div>`;
   const pop = document.createElement('div');
   pop.className = 'tpop';
   pop.innerHTML = `<div class="wheels"><div class="band"></div>${col(12, 0)}${col(59, 1)}${col(59, 2)}</div>
-    <div class="wl"><span>시간</span><span>분</span><span>초</span></div>
-    <p>정한 시간이 지나면 소리가 천천히 줄며 멈춰요.</p>
-    <div class="acts"><button data-t="off">타이머 끄기</button><button class="pri" data-t="set">설정</button></div>`;
+    <div class="wl"><span>시</span><span>분</span><span>초</span></div>
+    <div class="acts"><button data-t="off">끄기</button><button class="pri" data-t="set">설정</button></div>`;
   $('.pl-title').append(pop);
   tm.setAttribute('aria-expanded', 'true');
   const whs = $$('.wh', pop);
@@ -473,6 +485,7 @@ function openTimer() {
     const min = sec / 60;
     S.current.timer = sec > 0 ? min : null;
     S.timerEnd = engine.playing && sec > 0 ? Date.now() + sec * 1000 : null;
+    S.timerLeft = null;
     persist(); renderTimer(); closeTimer();
     toast(sec > 0 ? `${timerWords(min)} 뒤에 멈춰요` : '타이머를 껐어요');
   });
@@ -492,14 +505,22 @@ function renderPlayState() {
   if (S.view === 'mixes') renderMixes();
 }
 
+engine.setVolume(S.volume / 100);
 function play() {
   if (!S.current.tracks.length) { toast('먼저 라이브러리에서 음원을 골라 주세요'); return; }
   engine.play(S.current.tracks);
-  S.timerEnd = S.current.timer ? Date.now() + S.current.timer * 60000 : null;
+  const sec = S.timerLeft ?? (S.current.timer ? S.current.timer * 60 : null);
+  S.timerEnd = sec ? Date.now() + sec * 1000 : null;
+  S.timerLeft = null;
   if (S.current.id) { S.lastId = S.current.id; saveLast(S.lastId); }
   renderTimer();
 }
-function pause() { engine.pause(); S.timerEnd = null; renderTimer(); }
+function pause() {
+  engine.pause();
+  if (S.timerEnd) S.timerLeft = Math.max(1, Math.round((S.timerEnd - Date.now()) / 1000));
+  S.timerEnd = null;
+  renderTimer();
+}
 
 function toggleSound(sid) {
   const i = S.current.tracks.findIndex((t) => t.soundId === sid);
@@ -526,7 +547,7 @@ function loadMix(id, { stay = false } = {}) {
   engine.stopAll();
   S.current = structuredClone(m);
   S.current.tracks.forEach((t) => (t.uid = uid()));
-  S.open = null;
+  S.open = null; S.timerLeft = null;
   if (!stay) S.view = 'player';
   persist();
   renderLeft(); refreshLibChecks();
@@ -536,7 +557,7 @@ function loadMix(id, { stay = false } = {}) {
 function startNewMix() {
   engine.stopAll();
   S.current = newMix();
-  S.open = null; S.timerEnd = null;
+  S.open = null; S.timerEnd = null; S.timerLeft = null;
   S.view = 'player';
   persist();
   renderLeft(); refreshLibChecks();
