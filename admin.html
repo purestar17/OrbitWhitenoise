@@ -46,6 +46,12 @@ button.lp{background:none;color:var(--acc);padding:4px 8px;white-space:nowrap}
 .lc-wv i{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:0;opacity:.8}
 .lc-wv span{position:absolute;top:6px;font-size:11px;color:var(--mut)}.lc-wv .l{left:8px}.lc-wv .r{right:8px}
 .lc p{margin-top:8px}
+.lc-mk,.lc-made{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--mut)}
+.lc-mk label{flex-direction:row;align-items:center;gap:8px;font-size:13px}.lc-mk b{color:#fff;min-width:36px}
+.lc-mk input[type=range]{padding:0;width:140px;accent-color:var(--acc)}
+.lc-made{background:#0b1b2c;border-radius:10px;padding:10px 12px;color:var(--txt)}.lc-made .sp{flex:1}
+button:disabled{opacity:.6;cursor:wait}
+.credit{margin-top:30px;font-size:11px}
 </style>
 </head>
 <body>
@@ -74,6 +80,8 @@ button.lp{background:none;color:var(--acc);padding:4px 8px;white-space:nowrap}
       <div class="lc-hd"><b id="lc-title"></b><span class="sp"></span><button id="lc-play">■ 멈추기</button><button id="lc-close">닫기</button></div>
       <div class="lc-wv"><canvas id="lc-wave"></canvas><i id="lc-head"></i><span class="l">끝 3초</span><span class="r">처음 3초</span></div>
       <p id="lc-info"></p>
+      <div class="lc-mk"><span>이음새가 어색하면</span><label>겹치는 길이 <input type="range" id="lc-xf" min="0.5" max="5" step="0.5" value="2"> <b id="lc-xfv">2.0초</b></label><button class="pri" id="lc-make">✨ 매끄럽게 만들기</button></div>
+      <div class="lc-made" id="lc-made" hidden><span id="lc-made-info"></span><span class="sp"></span><button class="pri" id="lc-use">이 파일로 바꾸기</button><button id="lc-dl">⬇ 내려받기</button></div>
     </div>
   </div>
 
@@ -93,6 +101,7 @@ button.lp{background:none;color:var(--acc);padding:4px 8px;white-space:nowrap}
       <li>아래 <b>Commit changes</b>를 누르면 1~2분 뒤 앱에 반영돼요.</li>
     </ol>
   </div>
+  <p class="credit">MP3 변환: <a href="https://lame.sourceforge.io" style="color:var(--mut)">LAME</a> (lamejs, LGPL) · vendor/lame.min.js</p>
 </div>
 <script type="module" src="js/admin.js"></script>
 </body>
