@@ -198,9 +198,10 @@ input{font:inherit;color:inherit}
 .crow{margin-top:12px}
 .rh{display:flex;align-items:center;gap:8px;margin-bottom:10px;min-height:28px}
 .rh b{font-size:12.5px;color:#fff;font-weight:500}
-.rh .val,.fr .val{margin-left:auto;font-size:12px;color:var(--txt);font-family:'JetBrains Mono',ui-monospace,monospace;padding:3px 6px;border-radius:6px;border:1px dashed transparent}
-.rh .val.ed,.fr .val.ed{border-color:#ffffff33;cursor:text}
-.rh .val input,.fr .val input{width:64px;background:#06101c;border:1px solid var(--acc);border-radius:6px;padding:2px 6px;color:#fff;font-size:12px;text-align:center;outline:none}
+.rh .val,.fr .val{margin-left:auto;display:inline-flex;align-items:center;justify-content:flex-end;gap:3px;height:24px;font-size:12px;color:var(--txt);font-family:Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:0 6px;border-radius:6px;white-space:nowrap}
+.rh .val.ed,.fr .val.ed{cursor:text}
+@media (hover:hover){.rh .val.ed:hover,.fr .val.ed:hover{background:#ffffff12}}
+.rh .val input,.fr .val input{width:34px;height:20px;background:#06101c;border:1px solid var(--acc);border-radius:5px;padding:0 3px;color:#fff;font:inherit;text-align:center;outline:none}
 .ms{display:flex;gap:2px;background:#06101c;border:1px solid #1a3550;border-radius:8px;padding:2px}
 .ms button{width:30px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mut);position:relative}
 .ms button .ico{width:17px;height:17px}
@@ -232,10 +233,10 @@ input{font:inherit;color:inherit}
 .fds{display:flex;gap:10px}
 .fr{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;color:#8ea4bb;background:#06101c;border:1px solid #1a3550;border-radius:9px;padding:2px 4px 2px 8px}
 .fr .ico{width:16px;height:16px}
-.fr>span:not(.val){flex:none}
+.fr>span:not(.val){flex:none;width:24px}
 .fr .sl{flex:1;min-width:30px;margin:0 9px}
-.fr .val{margin-left:0;flex:none;padding:3px 4px;text-align:right}
-.fr .val input{width:44px}
+.fr .val{margin-left:0;flex:none;width:50px;padding:0 4px}
+.fr .val input{width:26px}
 .fnote{margin-top:4px}
 .note{font-size:11px;color:var(--mut);line-height:1.55}
 .fd{display:flex;gap:8px}

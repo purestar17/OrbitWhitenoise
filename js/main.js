@@ -651,7 +651,8 @@ function editValue(u, kind) {
   if ((kind === 'vol' && o.mode === 'full') || (kind === 'int' && (o.mode === 'loop' || o.mode === 'full'))) return;
   const fmt = (x) => Math.round(x);
   const two = o.mode === 'range';
-  el.innerHTML = two ? `<input value="${fmt(o.min)}"> ~ <input value="${fmt(o.max)}">` : `<input value="${fmt(o.value)}">`;
+  const unit = kind === 'vol' ? '%' : '초';
+  el.innerHTML = two ? `<input value="${fmt(o.min)}" inputmode="numeric">~<input value="${fmt(o.max)}" inputmode="numeric">${unit}` : `<input value="${fmt(o.value)}" inputmode="numeric">${unit}`;
   const ins = $$('input', el);
   ins[0].focus(); ins[0].select();
   const parse = (s) => kind === 'vol' ? clamp(Math.round(parseFloat(s)), 1, 100) : clamp(Math.round(parseTime(s)), 1, MAX_INT);
@@ -675,7 +676,7 @@ function editFade(u, w) {
   const t = trackBy(u);
   const el = $(`.k[data-uid="${u}"] [data-act="editfade"][data-w="${w}"]`);
   if (!t || !el || el.querySelector('input')) return;
-  el.innerHTML = `<input value="${t.fade[w]}" inputmode="decimal">`;
+  el.innerHTML = `<input value="${t.fade[w]}" inputmode="decimal">초`;
   const inp = $('input', el);
   inp.focus(); inp.select();
   let done = false;
