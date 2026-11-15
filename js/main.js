@@ -206,9 +206,8 @@ function fillHTML(t) {
   return `<div class="fill" style="width:${v.value}%"></div>`;
 }
 
-const VOL_MODES = [['fixed', 'v-fixed', '고정'], ['range', 'v-range', '범위 랜덤'], ['full', 'v-full', '완전 랜덤']];
-const INT_MODES = [['loop', 'i-loop', '∞ 지속'], ['fixed', 'i-fixed', '정해진 간격'], ['range', 'i-range', '범위 랜덤'], ['full', 'i-full', '완전 랜덤']];
-const PRESETS = [10, 30, 60, 300, 900, 1800];
+const VOL_MODES = [['fixed', 'v-fixed', '고정'], ['range', 'v-range', '범위 랜덤']];
+const INT_MODES = [['loop', 'i-loop', '∞ 지속'], ['fixed', 'i-fixed', '정해진 간격'], ['range', 'i-range', '범위 랜덤'], ['full', 'v-full', '완전 랜덤']];
 const TICKS = [1, 5, 30, 120, 600, 1800];
 
 function volText(v) {
@@ -218,17 +217,21 @@ function volText(v) {
 }
 function intText(i) {
   if (i.mode === 'loop') return '끊김 없이 계속';
-  if (i.mode === 'fixed') return `${fmtSec(i.value)}마다`;
-  if (i.mode === 'range') return `${fmtSec(i.min)} ~ ${fmtSec(i.max)}`;
-  return '1초 ~ 30분';
+  if (i.mode === 'fixed') return `${Math.round(i.value)}초마다`;
+  if (i.mode === 'range') return `${Math.round(i.min)} ~ ${Math.round(i.max)}초`;
+  return `1 ~ ${MAX_INT}초`;
 }
+const fadeText = (s) => `${(+s).toFixed(1)}초`;
+const FADE_MAX = 5;
 
 function trackHTML(t) {
+  if (t.volume.mode === 'full') Object.assign(t.volume, { mode: 'range', min: 1, max: 100 }); // old mixes
   const s = soundOf(t);
   const open = S.open === t.uid;
   const iv = intervalLabel(t.interval);
   return `
-  <div class="k${open ? ' op' : ''}${t.muted ? ' mute' : ''}" data-uid="${t.uid}" style="--c:${colorOf(t)}">
+  <div class="k${open ? ' op' : ''}${t.muted ? ' mute' : ''}${S.swiped === t.uid ? ' sw open' : ''}" data-uid="${t.uid}" style="--c:${colorOf(t)}">
+    <button class="swdel" data-act="remove" tabindex="-1">삭제</button>
     <div class="hd">
       ${fillHTML(t)}
       <button class="th" data-act="mute" aria-label="${t.muted ? '켜기' : '끄기'}">${art(s)}<svg class="ico"><use href="#ic-mute"/></svg></button>
@@ -249,23 +252,19 @@ function bodyHTML(t) {
   <div class="bdy">
     <div class="crow">
       <div class="rh"><b>볼륨</b>${modes(VOL_MODES, v.mode, 'vmode')}<span class="val${editable('vol', v.mode) ? ' ed' : ''}" data-act="editvol">${volText(v)}</span></div>
-      ${v.mode !== 'full' ? `<div class="sl" data-sl="vol"></div>` : '<p class="note">재생할 때마다 1~100% 사이에서 아무 볼륨이나 골라요.</p>'}
+      <div class="sl" data-sl="vol"></div>
     </div>
     <div class="crow">
       <div class="rh"><b>재생 간격</b>${modes(INT_MODES, i.mode, 'imode')}<span class="val${editable('int', i.mode) ? ' ed' : ''}" data-act="editint">${intText(i)}</span></div>
-      ${i.mode === 'fixed' || i.mode === 'range' ? `<div class="sl" data-sl="int"></div>
-        <div class="ticks">${TICKS.map((s) => `<i style="left:${logPos(s) * 100}%">${fmtShort(s)}</i>`).join('')}</div>
-        ${i.mode === 'fixed' ? `<div class="presets">${PRESETS.map((s) => `<button data-act="preset" data-s="${s}" class="${i.value === s ? 'on' : ''}">${fmtShort(s)}</button>`).join('')}</div>` : ''}`
+      <div class="ib">${i.mode === 'fixed' || i.mode === 'range' ? `<div class="sl" data-sl="int"></div>
+        <div class="ticks">${TICKS.map((s) => `<i style="left:${logPos(s) * 100}%">${s}초</i>`).join('')}</div>`
       : i.mode === 'loop' ? '<p class="note">소리가 끝나면 바로 이어서, 끊김 없이 반복해요.</p>'
-      : '<p class="note">한 번 재생이 끝날 때마다 1초~30분 사이에서 다음 간격을 새로 골라요.</p>'}
+      : `<p class="note">한 번 재생이 끝날 때마다 1~${MAX_INT}초 사이에서 다음 간격을 새로 골라요.</p>`}</div>
     </div>
     <div class="crow">
       <div class="rh"><b>페이드</b></div>
-      <div class="fd">
-        <div><svg class="ico"><use href="#f-in"/></svg>인<b>${t.fade.in}초</b><button data-act="fade" data-w="in" data-d="-0.5" aria-label="페이드 인 줄이기">−</button><button data-act="fade" data-w="in" data-d="0.5" aria-label="페이드 인 늘리기">+</button></div>
-        <div><svg class="ico"><use href="#f-out"/></svg>아웃<b>${t.fade.out}초</b><button data-act="fade" data-w="out" data-d="-0.5" aria-label="페이드 아웃 줄이기">−</button><button data-act="fade" data-w="out" data-d="0.5" aria-label="페이드 아웃 늘리기">+</button></div>
-      </div>
-      ${i.mode === 'loop' ? '<p class="note" style="margin-top:6px">계속 재생에서는 켜고 끌 때만 페이드돼요.</p>' : ''}
+      ${['in', 'out'].map((w) => `<div class="fr"><svg class="ico"><use href="#f-${w}"/></svg><span>${w === 'in' ? '인' : '아웃'}</span><div class="sl" data-sl="fade-${w}"></div><span class="val ed" data-act="editfade" data-w="${w}">${fadeText(t.fade[w])}</span></div>`).join('')}
+      <p class="note fnote"${i.mode === 'loop' ? '' : ' style="visibility:hidden"'}>계속 재생에서는 켜고 끌 때만 페이드돼요.</p>
     </div>
     <div class="foot"><button data-act="remove">믹스에서 빼기</button></div>
   </div>`;
@@ -297,7 +296,6 @@ function refreshCardHead(u) {
   ivEl.classList.toggle('loop', iv === '∞');
   const vv = $('[data-act="editvol"]', el); if (vv && !vv.querySelector('input')) vv.textContent = volText(t.volume);
   const iv2 = $('[data-act="editint"]', el); if (iv2 && !iv2.querySelector('input')) iv2.textContent = intText(t.interval);
-  $$('.presets button', el).forEach((b) => b.classList.toggle('on', +b.dataset.s === t.interval.value));
 }
 
 // ---------------------------------------------------------------- sliders
@@ -356,6 +354,18 @@ function initCardSliders(card) {
         refreshCardHead(t.uid); syncEngine();
       },
       onEnd: persist,
+    });
+  }
+  for (const w of ['in', 'out']) {
+    const fs = $(`[data-sl="fade-${w}"]`, card);
+    if (!fs) continue;
+    makeSlider(fs, {
+      values: [Math.min(FADE_MAX, t.fade[w])],
+      toPos: (x) => x / FADE_MAX,
+      fromPos: (p) => Math.round(p * FADE_MAX * 10) / 10,
+      color: colorOf(t),
+      onInput: ([x]) => { t.fade[w] = x; const el = $(`[data-act="editfade"][data-w="${w}"]`, card); if (el && !el.querySelector('input')) el.textContent = fadeText(x); },
+      onEnd: () => { persist(); syncEngine(); },
     });
   }
   const is = $('[data-sl="int"]', card);
@@ -548,7 +558,7 @@ function editValue(u, kind) {
   if (!t || !el || el.querySelector('input')) return;
   const o = kind === 'vol' ? t.volume : t.interval;
   if ((kind === 'vol' && o.mode === 'full') || (kind === 'int' && (o.mode === 'loop' || o.mode === 'full'))) return;
-  const fmt = kind === 'vol' ? (x) => x : (x) => fmtShort(x).replace('분', 'm').replace('초', 's');
+  const fmt = (x) => Math.round(x);
   const two = o.mode === 'range';
   el.innerHTML = two ? `<input value="${fmt(o.min)}"> ~ <input value="${fmt(o.max)}">` : `<input value="${fmt(o.value)}">`;
   const ins = $$('input', el);
@@ -561,13 +571,32 @@ function editValue(u, kind) {
     if (vals.every((v) => !Number.isNaN(v))) {
       if (two) { o.min = Math.min(...vals); o.max = Math.max(...vals); } else o.value = vals[0];
       persist(); syncEngine();
-    } else toast(kind === 'vol' ? '1~100 사이 숫자를 넣어 주세요' : '예: 45, 2:30, 2분 15초');
+    } else toast(kind === 'vol' ? '1~100 사이 숫자를 넣어 주세요' : `1~${MAX_INT} 사이 초를 넣어 주세요`);
     rerenderCard(u);
   };
   ins.forEach((i) => {
     i.onkeydown = (e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { done = true; rerenderCard(u); } };
     i.onblur = () => setTimeout(() => { if (!el.contains(document.activeElement)) commit(); }, 0);
   });
+}
+
+function editFade(u, w) {
+  const t = trackBy(u);
+  const el = $(`.k[data-uid="${u}"] [data-act="editfade"][data-w="${w}"]`);
+  if (!t || !el || el.querySelector('input')) return;
+  el.innerHTML = `<input value="${t.fade[w]}" inputmode="decimal">`;
+  const inp = $('input', el);
+  inp.focus(); inp.select();
+  let done = false;
+  const commit = () => {
+    if (done) return; done = true;
+    const v = parseFloat(inp.value);
+    if (Number.isFinite(v)) { t.fade[w] = clamp(Math.round(v * 10) / 10, 0, FADE_MAX); persist(); syncEngine(); }
+    else toast(`0~${FADE_MAX} 사이 초를 넣어 주세요`);
+    rerenderCard(u);
+  };
+  inp.onkeydown = (e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { done = true; rerenderCard(u); } };
+  inp.onblur = () => setTimeout(commit, 0);
 }
 
 // ---------------------------------------------------------------- events: left pane
@@ -608,6 +637,7 @@ left.addEventListener('click', (e) => {
     case 'mute':
       t.muted = !t.muted; persist(); syncEngine(); rerenderCard(u); refreshRadar(); refreshBg(); break;
     case 'remove':
+      if (S.swiped === u) S.swiped = null;
       S.current.tracks = S.current.tracks.filter((x) => x.uid !== u);
       if (S.open === u) S.open = null;
       persist(); syncEngine(); renderPlayer(); refreshLibChecks();
@@ -617,13 +647,7 @@ left.addEventListener('click', (e) => {
       t.volume.mode = a.dataset.mode; persist(); syncEngine(); rerenderCard(u); break;
     case 'imode':
       t.interval.mode = a.dataset.mode; persist(); syncEngine(); rerenderCard(u); refreshBg(); break;
-    case 'preset':
-      t.interval.value = +a.dataset.s; persist(); syncEngine(); refreshCardHead(u); break;
-    case 'fade': {
-      const w = a.dataset.w;
-      t.fade[w] = clamp(Math.round((t.fade[w] + +a.dataset.d) * 10) / 10, 0, 10);
-      persist(); syncEngine(); rerenderCard(u); break;
-    }
+    case 'editfade': editFade(u, a.dataset.w); break;
     case 'editvol': editValue(u, 'vol'); break;
     case 'editint': editValue(u, 'int'); break;
   }
@@ -649,8 +673,23 @@ left.addEventListener('pointerdown', (e) => {
   if (!hd || e.target.closest('button')) return;
   const u = hd.parentElement.dataset.uid;
   const t = trackBy(u);
-  hdDrag = { hd, u, t, x0: e.clientX, y0: e.clientY, moved: false, start: structuredClone(t.volume), id: e.pointerId };
+  const touch = e.pointerType !== 'mouse';
+  hdDrag = { hd, u, t, x0: e.clientX, y0: e.clientY, moved: false, start: structuredClone(t.volume), id: e.pointerId, touch, base: S.swiped === u ? SWIPE : 0, dx: 0 };
 });
+// a card swiped open closes when anything else is touched
+const SWIPE = 76;
+left.addEventListener('pointerdown', (e) => {
+  if (!S.swiped || e.target.closest(`.k[data-uid="${S.swiped}"]`)) return;
+  closeSwipe();
+}, true);
+function closeSwipe() {
+  const k = S.swiped && $(`.k[data-uid="${S.swiped}"]`);
+  S.swiped = null;
+  if (!k) return;
+  k.classList.remove('open');
+  $('.hd', k).style.transform = '';
+  setTimeout(() => { if (!k.classList.contains('open')) k.classList.remove('sw'); }, 220);
+}
 left.addEventListener('pointermove', (e) => {
   if (!hdDrag || e.pointerId !== hdDrag.id) return;
   const dx = e.clientX - hdDrag.x0, dy = e.clientY - hdDrag.y0;
@@ -660,8 +699,14 @@ left.addEventListener('pointermove', (e) => {
     hdDrag.moved = true;
     hdDrag.hd.setPointerCapture(e.pointerId);
   }
+  if (hdDrag.touch) {
+    const k = hdDrag.hd.parentElement, w = hdDrag.hd.offsetWidth;
+    hdDrag.dx = clamp(hdDrag.base + dx, 0, w);
+    k.classList.add('sw', 'drag');
+    hdDrag.hd.style.transform = `translateX(${hdDrag.dx}px)`;
+    return;
+  }
   const v = hdDrag.t.volume;
-  if (v.mode === 'full') return;
   const r = hdDrag.hd.getBoundingClientRect();
   if (v.mode === 'fixed') v.value = clamp(Math.round(((e.clientX - r.left) / r.width) * 100), 1, 100);
   else {
@@ -675,8 +720,21 @@ left.addEventListener('pointermove', (e) => {
 });
 const hdEnd = (e) => {
   if (!hdDrag || e.pointerId !== hdDrag.id) return;
-  const { u, moved } = hdDrag;
+  const { u, moved, touch, hd, dx, base } = hdDrag;
   hdDrag = null;
+  if (touch && (moved || base)) {
+    const k = hd.parentElement;
+    k.classList.remove('drag');
+    if (!moved) { closeSwipe(); return; } // tap on an open card closes it
+    if (dx > hd.offsetWidth * 0.6) { // long swipe: delete right away
+      hd.style.transform = `translateX(${hd.offsetWidth}px)`;
+      setTimeout(() => $('.swdel', k)?.click(), 160);
+      return;
+    }
+    if (dx > SWIPE / 2) { if (S.swiped && S.swiped !== u) closeSwipe(); S.swiped = u; k.classList.add('open'); hd.style.transform = ''; }
+    else { S.swiped = u; closeSwipe(); }
+    return;
+  }
   if (moved) {
     persist();
     if (S.open === u) rerenderCard(u);
@@ -688,7 +746,11 @@ const hdEnd = (e) => {
   }
 };
 left.addEventListener('pointerup', hdEnd);
-left.addEventListener('pointercancel', (e) => { if (hdDrag?.id === e.pointerId) hdDrag = null; });
+left.addEventListener('pointercancel', (e) => {
+  if (hdDrag?.id !== e.pointerId) return;
+  if (hdDrag.touch) { hdDrag.hd.parentElement.classList.remove('drag'); if (S.swiped !== hdDrag.u) { hdDrag.hd.style.transform = ''; hdDrag.hd.parentElement.classList.remove('sw'); } else hdDrag.hd.style.transform = ''; }
+  hdDrag = null;
+});
 
 // spatial sheet: drag the handle, or tap it
 let sh = null;
