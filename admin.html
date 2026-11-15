@@ -70,6 +70,24 @@ td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:co
 .state{font-size:12px;color:var(--acc);margin-top:6px}
 .foot{display:flex;gap:8px;align-items:center;margin-top:18px;flex-wrap:wrap}.foot .sp{flex:1}
 .credit{margin-top:30px;font-size:11px}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mut)}
+label.inl{flex-direction:row;align-items:center;gap:6px;font-size:13px}
+.dd{position:relative}
+.dd-btn{width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--line2);padding:9px 10px;text-align:left}
+.dd-btn em{font-style:normal;color:var(--mut);font-size:9px}
+.dd-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--box);border:1px solid var(--line2);border-radius:10px;list-style:none;padding:4px;z-index:5;max-height:280px;overflow:auto;box-shadow:0 10px 30px #000a}
+.dd-list li{padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--txt)}
+.dd-list li:hover,.dd-list li.on{background:#12263a}
+.dd-list li.add{color:var(--acc);border-top:1px solid var(--line);border-radius:0 0 7px 7px;margin-top:2px}
+.dd-list li.form{display:flex;gap:6px;padding:6px;cursor:default;background:none}
+.dd-list li.form input{flex:1;min-width:0}
+.dd-list li.form button{padding:8px 12px}
+.dd-list .err{font-size:11px;color:#ff8a8a;padding:0 8px 6px}
+.wv-sel{cursor:crosshair;touch-action:none;user-select:none}
+.wv .sel{position:absolute;top:0;bottom:0;border-left:2px solid #ffd36b;border-right:2px solid #ffd36b;box-shadow:0 0 0 2000px #06101caa;pointer-events:none}
+.wv .sel s{position:absolute;top:0;bottom:0}
+.wv .sel .fi{left:0;background:linear-gradient(to right,#06101cdd,transparent)}
+.wv .sel .fo{right:0;background:linear-gradient(to left,#06101cdd,transparent)}
 </style>
 </head>
 <body>
@@ -103,7 +121,7 @@ td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:co
       <div><div class="card" id="pv"></div><p class="small" style="margin-top:6px">라이브러리에 보이는 모습</p></div>
       <div class="form">
         <label>이름<input id="f-name" placeholder="예: 대나무 숲 바람"></label>
-        <label>분류<select id="f-cat"></select><input id="f-newcat" placeholder="새 분류 이름 (예: 동물)" hidden></label>
+        <div class="lbl">분류<div class="dd" id="f-cat"><button type="button" class="dd-btn" aria-haspopup="listbox"><span></span><em>▼</em></button><ul class="dd-list" role="listbox" hidden></ul></div></div>
         <label>대표 색<input id="f-color" type="color" value="#5ee1c6"></label>
       </div>
     </div>
@@ -120,9 +138,17 @@ td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:co
     <div class="tools" id="tools">
       <h4>음원 편집</h4>
       <p>편집한 결과는 "저장"을 누를 때 새 MP3 파일로 만들어져요. 원래 파일은 그대로 있어요.</p>
-      <div class="wv"><canvas id="wv-all"></canvas><i id="wv-all-head"></i></div>
+      <div class="wv wv-sel" id="wv-box"><canvas id="wv-all"></canvas><div class="sel" id="tr-sel"><s class="fi" id="tr-fi-sh"></s><s class="fo" id="tr-fo-sh"></s></div><i id="wv-all-head"></i></div>
       <div class="row"><button id="t-play">▶ 처음부터 듣기</button><span id="t-len"></span><span class="sp" style="flex:1"></span><button id="t-reset" hidden>↺ 원래 파일로 되돌리기</button></div>
       <div class="state" id="t-state"></div>
+
+      <div class="tool">
+        <div class="tool-hd">✂ 일부분 잘라 효과음 만들기</div>
+        <p class="small">위 파형을 끌어서 남길 부분을 고르세요. 노란 선을 끌면 시작과 끝을 조절할 수 있어요.</p>
+        <div class="row" style="margin-top:8px"><label class="inl">시작 <input id="tr-a" type="number" min="0" step="0.1" style="width:84px"> 초</label><label class="inl">끝 <input id="tr-b" type="number" min="0" step="0.1" style="width:84px"> 초</label><span id="tr-len"></span></div>
+        <div class="row" style="margin-top:8px"><label class="inl">처음 서서히 커지기 <input type="range" id="tr-fi" min="0" max="3" step="0.1" value="0.3" style="width:120px"></label><b id="tr-fiv">0.3초</b><label class="inl">끝 서서히 작아지기 <input type="range" id="tr-fo" min="0" max="3" step="0.1" value="0.5" style="width:120px"></label><b id="tr-fov">0.5초</b></div>
+        <div class="row" style="margin-top:8px"><button id="tr-play">▶ 고른 부분 듣기</button><button id="tr-all">전체 선택</button><button class="pri" id="tr-apply">✂ 잘라내기 적용</button><button id="tr-fx" hidden>재생 간격을 효과음(범위 랜덤)으로</button></div>
+      </div>
 
       <div class="tool">
         <div class="tool-hd">🔊 음원 볼륨 키우기·줄이기</div>

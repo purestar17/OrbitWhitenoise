@@ -20,11 +20,54 @@ async function load() {
   renderList();
   measureLibrary();
 }
+// category dropdown: a list of its own so "+ 새 분류 추가" can turn into a text box inside it
+const allCats = () => [...manifest.categories, ...(ed?.newCats || [])];
 function renderCats(sel) {
-  $('#f-cat').innerHTML = manifest.categories.map((c) => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('')
-    + '<option value="__new">+ 새 분류 추가</option>';
-  syncCat();
+  if (sel !== undefined) ed.cat = sel;
+  const cats = allCats();
+  if (!cats.some((c) => c.id === ed.cat)) ed.cat = cats[0]?.id;
+  $('#f-cat .dd-btn span').textContent = cats.find((c) => c.id === ed.cat)?.name || '분류 고르기';
+  $('#f-cat .dd-list').innerHTML = cats.map((c) => `<li role="option" data-cat="${esc(c.id)}"${c.id === ed.cat ? ' class="on" aria-selected="true"' : ''}>${esc(c.name)}</li>`).join('')
+    + '<li class="add" data-add>+ 새 분류 추가</li>';
 }
+function openCats(open) {
+  const list = $('#f-cat .dd-list');
+  if (open === undefined) open = list.hidden;
+  if (open) renderCats();
+  list.hidden = !open;
+  if (open) list.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+}
+function newCatForm() {
+  const li = $('#f-cat [data-add]');
+  li.outerHTML = '<li class="form"><input id="f-newcat" placeholder="새 분류 이름 (예: 동물)" maxlength="20"><button type="button" class="pri" id="f-newcat-ok">추가</button></li><li class="err" id="f-newcat-err" hidden></li>';
+  $('#f-newcat').focus();
+}
+function addCat() {
+  const name = $('#f-newcat').value.trim();
+  const err = (t) => { $('#f-newcat-err').textContent = t; $('#f-newcat-err').hidden = false; $('#f-newcat').focus(); };
+  if (!name) return err('이름을 넣어 주세요');
+  const found = allCats().find((c) => c.name === name);
+  if (found) ed.cat = found.id;
+  else { const c = { id: 'cat' + Date.now().toString(36), name }; (ed.newCats ||= []).push(c); ed.cat = c.id; }
+  ed.dirty = true;
+  renderCats();
+  openCats(false);
+}
+$('#f-cat .dd-btn').addEventListener('click', () => openCats());
+$('#f-cat .dd-list').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const li = e.target.closest('li');
+  if (!li) return;
+  if (li.dataset.cat) { if (ed.cat !== li.dataset.cat) ed.dirty = true; ed.cat = li.dataset.cat; renderCats(); openCats(false); }
+  else if ('add' in li.dataset) newCatForm();
+  else if (e.target.id === 'f-newcat-ok') addCat();
+});
+$('#f-cat .dd-list').addEventListener('keydown', (e) => {
+  if (e.target.id !== 'f-newcat') return;
+  if (e.key === 'Enter') { e.preventDefault(); addCat(); }
+  if (e.key === 'Escape') { e.stopPropagation(); renderCats(); }
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('#f-cat')) $('#f-cat .dd-list').hidden = true; });
 const pendingBlob = (name) => pending.find((p) => p.name === name)?.blob;
 const imageURL = (s) => { const b = pendingBlob(s.image); return b ? URL.createObjectURL(b) : `sounds/${s.image}`; };
 function intText(s) {
@@ -50,12 +93,6 @@ $('#dlm').addEventListener('click', () => {
   a.download = 'manifest.json';
   a.click();
 });
-function syncCat() {
-  const isNew = $('#f-cat').value === '__new';
-  $('#f-newcat').hidden = !isNew;
-  if (isNew) $('#f-newcat').focus();
-}
-$('#f-cat').addEventListener('change', syncCat);
 function msg(t) { $('#msg').textContent = t; }
 function dmsg(t) { $('#dmsg').textContent = t; }
 function clampN(v, a, b, d) { v = Math.round(+v); return Number.isFinite(v) ? Math.min(b, Math.max(a, v)) : d; }
@@ -110,6 +147,19 @@ function crossfadeLoop(buf, xfade) {
     out.push(y);
   }
   return makeBuffer(out, buf.sampleRate);
+}
+// keep a..b seconds, fading in over `fin` and out over `fout` seconds (smooth S-curve)
+function trimFade(buf, a, b, fin, fout) {
+  const sr = buf.sampleRate, i0 = Math.max(0, Math.floor(a * sr)), i1 = Math.min(buf.length, Math.floor(b * sr)), n = i1 - i0;
+  const ni = Math.min(Math.floor(fin * sr), n), no = Math.min(Math.floor(fout * sr), n), out = [];
+  const curve = (t) => Math.sin(t * Math.PI / 2) ** 2;
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const y = buf.getChannelData(c).slice(i0, i1);
+    for (let i = 0; i < ni; i++) y[i] *= curve(i / ni);
+    for (let i = 0; i < no; i++) y[n - 1 - i] *= curve(i / no);
+    out.push(y);
+  }
+  return makeBuffer(out, sr);
 }
 // same loop points as js/engine.js startLoop()
 function loopPoints(buf) { const pad = Math.min(0.03, buf.duration / 20); return { start: pad, end: buf.duration - pad }; }
@@ -219,7 +269,7 @@ function openEditor(index) {
   $('#delete').hidden = index == null;
   $('#f-name').value = s.name;
   renderCats(s.category);
-  $('#f-newcat').value = '';
+  openCats(false);
   $('#f-color').value = s.color || '#5ee1c6';
   $('#f-scene').value = s.scene || 'mine';
   $('#f-int').value = s.interval || 'loop';
@@ -231,6 +281,7 @@ function openEditor(index) {
   $('#f-image').value = '';
   $('#v-db').value = 0; $('#v-dbv').textContent = '0 dB'; $('#v-warn').textContent = '';
   $('#lc-wv').hidden = true; $('#lc-info').textContent = '';
+  $('#tr-fx').hidden = true;
   dmsg('');
   syncInterval();
   preview();
@@ -265,7 +316,11 @@ function closeEditor() {
 $('#close').addEventListener('click', closeEditor);
 $('#cancel').addEventListener('click', closeEditor);
 $('#ov').addEventListener('click', (e) => { if (e.target.id === 'ov') closeEditor(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ed) closeEditor(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !ed) return;
+  if (!$('#f-cat .dd-list').hidden) return openCats(false);
+  closeEditor();
+});
 $('#ov').addEventListener('input', (e) => { if (ed && e.target.matches('input,select')) ed.dirty = true; });
 
 function syncInterval() {
@@ -306,14 +361,97 @@ async function loadAudio(src) {
 function showTools(state) {
   const has = !!ed?.buf;
   $('#tools').querySelectorAll('button,input').forEach((el) => { el.disabled = !has; });
+  $('#tr-fx').disabled = false;
   $('#t-reset').hidden = !ed?.edits.length;
   $('#t-state').textContent = state ?? (ed?.edits.length ? `편집됨: ${ed.edits.join(' → ')} (저장할 때 새 MP3로 만들어져요)` : '');
   if (!has) { $('#t-len').textContent = ''; $('#v-now').textContent = '-'; drawWave($('#wv-all'), () => 0, 1); return; }
   const b = ed.buf, ch = b.getChannelData(0);
   $('#t-len').textContent = `${b.duration.toFixed(1)}초`;
   drawWave($('#wv-all'), (i) => ch[i] || 0, b.length);
+  if (ed.selBuf !== b) { ed.selBuf = b; ed.sel = { a: 0, b: b.duration }; }
+  showSel();
   showLoudness();
 }
+
+// ---------------------------------------------------------------- trim: pick a part on the waveform
+const r1 = (v) => Math.round(v * 10) / 10;
+function showSel() {
+  const box = $('#tr-sel');
+  if (!ed?.buf) { box.hidden = true; $('#tr-len').textContent = ''; return; }
+  const d = ed.buf.duration, { a, b } = ed.sel, len = b - a;
+  box.hidden = false;
+  box.style.left = `${a / d * 100}%`;
+  box.style.width = `${len / d * 100}%`;
+  const fi = Math.min(+$('#tr-fi').value, len / 2), fo = Math.min(+$('#tr-fo').value, len / 2);
+  $('#tr-fi-sh').style.width = `${fi / len * 100}%`;
+  $('#tr-fo-sh').style.width = `${fo / len * 100}%`;
+  if (document.activeElement !== $('#tr-a')) $('#tr-a').value = r1(a);
+  if (document.activeElement !== $('#tr-b')) $('#tr-b').value = r1(b);
+  $('#tr-a').max = $('#tr-b').max = r1(d);
+  $('#tr-len').textContent = `고른 길이 ${len.toFixed(1)}초`;
+  $('#tr-apply').disabled = len >= d - 0.05 && !(+$('#tr-fi').value || +$('#tr-fo').value);
+}
+function setSel(a, b) {
+  const d = ed.buf.duration, MIN = 0.1;
+  a = Math.max(0, Math.min(d - MIN, a)); b = Math.max(a + MIN, Math.min(d, b));
+  ed.sel = { a, b };
+  showSel();
+}
+let drag = null;
+$('#wv-box').addEventListener('pointerdown', (e) => {
+  if (!ed?.buf || e.button) return;
+  const r = $('#wv-box').getBoundingClientRect(), d = ed.buf.duration, t = (e.clientX - r.left) / r.width * d;
+  const px = (s) => Math.abs(e.clientX - (r.left + s / d * r.width));
+  if (px(ed.sel.a) < 10) drag = { edge: 'a' };
+  else if (px(ed.sel.b) < 10) drag = { edge: 'b' };
+  else drag = { anchor: t, moved: false };
+  $('#wv-box').setPointerCapture(e.pointerId);
+});
+$('#wv-box').addEventListener('pointermove', (e) => {
+  if (!drag) {
+    if (!ed?.buf) return;
+    const r = $('#wv-box').getBoundingClientRect(), d = ed.buf.duration;
+    const near = [ed.sel.a, ed.sel.b].some((s) => Math.abs(e.clientX - (r.left + s / d * r.width)) < 10);
+    $('#wv-box').style.cursor = near ? 'ew-resize' : '';
+    return;
+  }
+  const r = $('#wv-box').getBoundingClientRect(), d = ed.buf.duration;
+  const t = Math.max(0, Math.min(d, (e.clientX - r.left) / r.width * d));
+  if (drag.edge === 'a') setSel(t, ed.sel.b);
+  else if (drag.edge === 'b') setSel(ed.sel.a, t);
+  else { drag.moved = true; setSel(Math.min(drag.anchor, t), Math.max(drag.anchor, t)); }
+});
+$('#wv-box').addEventListener('pointerup', () => { drag = null; });
+$('#wv-box').addEventListener('pointercancel', () => { drag = null; });
+['#tr-a', '#tr-b'].forEach((id) => $(id).addEventListener('change', () => { if (ed?.buf) setSel(+$('#tr-a').value || 0, +$('#tr-b').value || ed.buf.duration); }));
+['fi', 'fo'].forEach((k) => $(`#tr-${k}`).addEventListener('input', (e) => { $(`#tr-${k}v`).textContent = `${(+e.target.value).toFixed(1)}초`; if (ed?.buf) showSel(); }));
+$('#tr-all').addEventListener('click', () => { if (ed?.buf) setSel(0, ed.buf.duration); });
+const trimmed = () => trimFade(ed.buf, ed.sel.a, ed.sel.b, +$('#tr-fi').value, +$('#tr-fo').value);
+$('#tr-play').addEventListener('click', () => {
+  if (pl?.btn === $('#tr-play')) return stopPlay();
+  if (!ed?.buf) return;
+  const d = ed.buf.duration, head = $('#wv-all-head');
+  head.dataset.base = ed.sel.a / d * 100;
+  head.dataset.span = (ed.sel.b - ed.sel.a) / d * 100;
+  play(trimmed(), { btn: $('#tr-play'), head });
+});
+$('#tr-apply').addEventListener('click', () => {
+  if (!ed?.buf) return;
+  stopPlay();
+  const { a, b } = ed.sel, fi = +$('#tr-fi').value, fo = +$('#tr-fo').value;
+  ed.buf = trimmed();
+  ed.edits.push(`잘라내기 ${r1(a)}~${r1(b)}초${fi || fo ? ` (페이드 ${fi}·${fo}초)` : ''}`);
+  ed.dirty = true;
+  showTools();
+  $('#tr-fx').hidden = $('#f-int').value !== 'loop';
+});
+$('#tr-fx').addEventListener('click', () => {
+  $('#f-int').value = 'range';
+  syncInterval();
+  ed.dirty = true;
+  $('#tr-fx').hidden = true;
+  $('#f-min').focus();
+});
 function showLoudness() {
   if (!ed?.buf) return;
   ed.loud ??= new Map();
@@ -344,6 +482,7 @@ $('#v-prev').addEventListener('click', () => {
   if (pl?.btn === $('#v-prev')) return stopPlay();
   if (!ed?.buf) return;
   const b = ed.buf;
+  $('#wv-all-head').dataset.base = 0;
   $('#wv-all-head').dataset.span = (Math.min(8, b.duration) / b.duration) * 100;
   play(b, { dur: Math.min(8, b.duration), db: +$('#v-db').value, btn: $('#v-prev'), head: $('#wv-all-head') });
 });
@@ -360,6 +499,7 @@ $('#v-apply').addEventListener('click', () => {
 $('#t-play').addEventListener('click', () => {
   if (pl?.btn === $('#t-play')) return stopPlay();
   if (!ed?.buf) return;
+  $('#wv-all-head').dataset.base = 0;
   $('#wv-all-head').dataset.span = 100;
   play(ed.buf, { btn: $('#t-play'), head: $('#wv-all-head') });
 });
@@ -417,14 +557,9 @@ $('#save').addEventListener('click', async () => {
   btn.classList.add('busy');
   try {
     const s = ed.index == null ? { id: 's' + Date.now().toString(36) } : { ...manifest.sounds[ed.index] };
-    let cat = $('#f-cat').value;
-    const newCat = cat === '__new' ? $('#f-newcat').value.trim() : '';
-    if (cat === '__new' && !newCat) throw new Error('cat');
-    if (newCat) {
-      const found = manifest.categories.find((c) => c.name === newCat);
-      cat = found ? found.id : 'cat' + Date.now().toString(36);
-      if (!found) manifest.categories.push({ id: cat, name: newCat });
-    }
+    const cat = ed.cat;
+    const fresh = ed.newCats?.find((c) => c.id === cat);
+    if (fresh) manifest.categories.push(fresh);
     Object.assign(s, { name, category: cat, scene: $('#f-scene').value, color: $('#f-color').value, interval: $('#f-int').value, volume: clampN($('#f-vol').value, 1, 100, 60) });
     delete s.min; delete s.max; delete s.value;
     if (s.interval === 'range') { const a = clampN($('#f-min').value, 1, 1800, 10), b = clampN($('#f-max').value, 1, 1800, 60); s.min = Math.min(a, b); s.max = Math.max(a, b); }
@@ -457,7 +592,7 @@ $('#save').addEventListener('click', async () => {
     renderList();
     msg(`"${name}" 저장했어요. 아래에서 파일을 내려받아 올려 주세요.`);
   } catch (e) {
-    dmsg(e.message === 'cat' ? '새 분류 이름을 넣어 주세요' : e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
+    dmsg(e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
   } finally {
     btn.disabled = false;
     btn.classList.remove('busy');
