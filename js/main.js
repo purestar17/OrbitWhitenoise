@@ -71,6 +71,24 @@ function syncEngine() {
 function persist() {
   S.current.updated = Date.now();
   saveCurrent(S.current);
+  updateSaveBtn();
+}
+// save button: "저장" overwrites the mix; after a rename it becomes "새로 저장" (a new mix, the old one stays)
+const mixSig = (m) => JSON.stringify({ n: m.name, tm: m.timer ?? null, t: m.tracks.map(({ uid: _u, ...r }) => r) });
+function saveState() {
+  const name = ($('.mixname')?.value ?? S.current.name).trim() || '새 믹스';
+  const saved = S.current.id && S.mixes.find((m) => m.id === S.current.id);
+  const asNew = !!saved && name !== saved.name;
+  const dirty = !saved || asNew || mixSig({ ...S.current, name }) !== mixSig(saved);
+  return { name, saved, asNew, dirty };
+}
+function updateSaveBtn() {
+  const b = $('.pl-top [data-act="save"]');
+  if (!b) return;
+  const st = saveState();
+  b.textContent = st.asNew ? '새로 저장' : '저장';
+  b.classList.toggle('dirty', st.dirty && S.current.tracks.length > 0);
+  b.title = st.asNew ? `"${st.name}" 이름으로 새 믹스를 만들어요. "${st.saved.name}"은 그대로 남아요.` : st.saved ? '이 믹스에 덮어써요' : '나의 믹스에 저장해요';
 }
 
 // ---------------------------------------------------------------- helpers
@@ -154,7 +172,7 @@ function renderMixes() {
         const bg = bgSound(m);
         return `<div class="mx${m.id === S.lastId ? ' last' : ''}" data-mix="${m.id}" role="button" tabindex="0">
           <div class="bgl">${art(bg)}</div>
-          <div class="in"><b>${esc(m.name)}</b><small>음원 ${m.tracks.length}개 · ${m.timer ? `타이머 ${timerWords(m.timer)}` : '타이머 없음'}</small>
+          <div class="in">${S.editMixes ? `<input class="mxname" data-id="${m.id}" value="${esc(m.name)}" maxlength="30" aria-label="믹스 이름">` : `<b>${esc(m.name)}</b>`}<small>음원 ${m.tracks.length}개 · ${m.timer ? `타이머 ${timerWords(m.timer)}` : '타이머 없음'}</small>
           <div class="ths">${m.tracks.slice(0, 6).map((t) => `<i class="scene s-${esc(S.sounds.get(t.soundId)?.scene || 'mine')}"></i>`).join('')}</div></div>
           ${S.editMixes ? `<button class="rm" data-rm="${m.id}">삭제</button>` : `<div class="pc"><button class="play${playing && cur.id === m.id ? ' on' : ''}" data-act="mixplay" data-id="${m.id}" aria-label="${playing && cur.id === m.id ? '일시정지' : '재생'}"></button>${m.id === S.lastId ? '<span class="tag">마지막 재생</span>' : ''}</div>`}
         </div>`;
@@ -201,6 +219,7 @@ function renderPlayer() {
     </div>`;
   renderTimer();
   initMasterVol($('#left'));
+  updateSaveBtn();
   $$('.k.op').forEach(initCardSliders);
   refreshBg();
 }
@@ -591,31 +610,20 @@ function startNewMix() {
 
 function saveMix() {
   if (!S.current.tracks.length) { toast('저장할 음원이 없어요'); return; }
-  const doSave = (name) => {
-    S.current.name = name;
-    const copy = structuredClone(S.current);
-    copy.updated = Date.now();
-    if (S.current.id) {
-      const i = S.mixes.findIndex((m) => m.id === S.current.id);
-      if (i >= 0) S.mixes[i] = copy; else S.mixes.push(copy);
-    } else {
-      copy.id = S.current.id = uid();
-      S.mixes.push(copy);
-    }
-    S.lastId = S.current.id; saveLast(S.lastId);
-    saveMixes(S.mixes); persist();
-    const nm = $('.mixname'); if (nm) nm.value = name;
-    toast(`"${name}" 저장했어요`);
-  };
-  if (S.current.id) { doSave(S.current.name); return; }
-  dialog(`<h3>믹스 저장</h3><p>나중에 "나의 믹스"에서 바로 다시 들을 수 있어요.</p>
-    <input type="text" id="mname" maxlength="30" value="${esc(S.current.name === '새 믹스' ? '' : S.current.name)}" placeholder="예: 비 오는 캠핑">
-    <div class="acts"><button data-x>취소</button><button class="pri" data-ok>저장</button></div>`, (dlg, close) => {
-    const inp = $('#mname', dlg); inp.focus();
-    const ok = () => { doSave(inp.value.trim() || '나의 믹스'); close(); };
-    $('[data-ok]', dlg).onclick = ok; $('[data-x]', dlg).onclick = close;
-    inp.onkeydown = (e) => { if (e.key === 'Enter') ok(); };
-  });
+  const { name, saved, asNew } = saveState();
+  S.current.name = name;
+  const copy = structuredClone(S.current);
+  copy.updated = Date.now();
+  if (saved && !asNew) {
+    S.mixes[S.mixes.indexOf(saved)] = copy;
+  } else {
+    copy.id = S.current.id = uid();
+    S.mixes.push(copy);
+  }
+  S.lastId = S.current.id; saveLast(S.lastId);
+  saveMixes(S.mixes); persist();
+  const nm = $('.mixname'); if (nm) nm.value = name;
+  toast(asNew ? `"${name}" 새 믹스로 저장했어요` : `"${name}" 저장했어요`);
 }
 
 async function shareMix() {
@@ -744,11 +752,21 @@ left.addEventListener('click', (e) => {
   }
 });
 left.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.matches('.mixname')) { e.preventDefault(); e.target.blur(); return; }
+  if (e.key === 'Enter' && e.target.matches('.mixname, .mxname')) { e.preventDefault(); e.target.blur(); return; }
   if (e.key === 'Enter' && e.target.matches('[data-mix]') && !S.editMixes) loadMix(e.target.dataset.mix);
 });
 left.addEventListener('change', (e) => {
   if (e.target.matches('.mixname')) { S.current.name = e.target.value.trim() || '새 믹스'; persist(); updateMediaSession(); }
+  if (e.target.matches('.mxname')) {
+    const m = S.mixes.find((x) => x.id === e.target.dataset.id);
+    if (!m) return;
+    m.name = e.target.value.trim() || m.name;
+    e.target.value = m.name;
+    saveMixes(S.mixes);
+    if (S.current.id === m.id) { S.current.name = m.name; persist(); renderMixes(); }
+  }
+});
+left.addEventListener('input', (e) => { if (e.target.matches('.mixname')) updateSaveBtn(); 
 });
 
 function refreshBg() {
