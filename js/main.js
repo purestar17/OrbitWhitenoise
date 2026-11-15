@@ -152,10 +152,9 @@ function renderMixes() {
         const bg = bgSound(m);
         return `<div class="mx${m.id === S.lastId ? ' last' : ''}" data-mix="${m.id}" role="button" tabindex="0">
           <div class="bgl">${art(bg)}</div>
-          ${m.id === S.lastId && !S.editMixes ? '<span class="tag">마지막 재생</span>' : ''}
-          <div class="in"><b>${esc(m.name)}</b><small>음원 ${m.tracks.length}개 · ${m.timer ? `타이머 ${m.timer}분` : '타이머 없음'}</small>
+          <div class="in"><b>${esc(m.name)}</b><small>음원 ${m.tracks.length}개 · ${m.timer ? `타이머 ${timerWords(m.timer)}` : '타이머 없음'}</small>
           <div class="ths">${m.tracks.slice(0, 6).map((t) => `<i class="scene s-${esc(S.sounds.get(t.soundId)?.scene || 'mine')}"></i>`).join('')}</div></div>
-          ${S.editMixes ? `<button class="rm" data-rm="${m.id}">삭제</button>` : '<span class="play"></span>'}
+          ${S.editMixes ? `<button class="rm" data-rm="${m.id}">삭제</button>` : `<div class="pc"><button class="play${playing && cur.id === m.id ? ' on' : ''}" data-act="mixplay" data-id="${m.id}" aria-label="${playing && cur.id === m.id ? '일시정지' : '재생'}"></button>${m.id === S.lastId ? '<span class="tag">마지막 재생</span>' : ''}</div>`}
         </div>`;
       }).join('')}
       ${!S.mixes.length ? '<p class="hint">저장한 믹스가 여기에 모여요. 라이브러리에서 음원을 눌러 조합을 만들고 "저장"을 누르세요.</p>' : ''}
@@ -185,13 +184,13 @@ function renderPlayer() {
         <div class="pl-title">
           <button class="pb${engine.playing ? ' on' : ''}" data-act="playpause" aria-label="재생/일시정지"></button>
           <div class="ttl"><input class="mixname" value="${esc(m.name)}" maxlength="30" aria-label="믹스 이름"><small>음원 ${m.tracks.length}개${engine.playing ? ' 재생 중' : ''}</small></div>
-          <button class="tm" data-act="timer"></button>
+          <button class="tm" data-act="timer" aria-expanded="false"></button>
         </div>
-        <button class="tbar${S.tracksHidden ? ' off' : ''}" data-act="tracks" aria-expanded="${!S.tracksHidden}"><i></i><span>${tbarText()}</span><i></i></button>
+        <button class="tbar${S.tracksHidden ? ' off' : ''}" data-act="tracks" aria-expanded="${!S.tracksHidden}" aria-label="음원 목록 접기·펼치기"><i></i><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.6 6 4.1l3.5 3.5"/></svg><i></i></button>
         <div class="tracks${S.tracksHidden ? ' off' : ''}">${m.tracks.length ? m.tracks.map(trackHTML).join('') : `<div class="pl-empty">${isMobile() ? '왼쪽으로 밀어 라이브러리' : '오른쪽 라이브러리'}에서 음원을 누르면<br>여기에 추가되고 바로 재생돼요.</div>`}</div>
       </div>
       <div class="sheet${S.sheetOpen ? ' open' : ''}">
-        <div class="hdl" data-act="sheet"><i></i><span>${S.sheetOpen ? '⌄' : '⌃'} 공간 배치</span></div>
+        <div class="hdl" data-act="sheet"><i></i><span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.6 6 4.1l3.5 3.5"/></svg>공간 배치</span></div>
         <div class="sh"><span>음원을 끌어서 위치 조정</span><span>가운데 = 사방에서 · 바깥 = 멀리</span></div>
         <div class="radar-wrap"><div class="radar">${radarHTML()}</div></div>
       </div>
@@ -226,13 +225,12 @@ function intText(i) {
 const fadeText = (s) => `${(+s).toFixed(1)}초`;
 const FADE_MAX = 5;
 
-const tbarText = () => (S.tracksHidden ? `음원 ${S.current.tracks.length}개 펼치기 ⌄` : '음원 목록 접기 ⌃');
 function toggleTracks() {
   S.tracksHidden = !S.tracksHidden;
   try { localStorage.setItem('orbit-tracks-hidden', S.tracksHidden ? '1' : '0'); } catch { /* private mode */ }
   $('.tracks')?.classList.toggle('off', S.tracksHidden);
   const b = $('.tbar');
-  if (b) { b.classList.toggle('off', S.tracksHidden); b.setAttribute('aria-expanded', !S.tracksHidden); $('span', b).textContent = tbarText(); }
+  if (b) { b.classList.toggle('off', S.tracksHidden); b.setAttribute('aria-expanded', !S.tracksHidden); }
 }
 function trackHTML(t) {
   if (t.volume.mode === 'full') Object.assign(t.volume, { mode: 'range', min: 1, max: 100 }); // old mixes
@@ -286,8 +284,11 @@ function rerenderCard(u) {
   const tmp = document.createElement('div');
   tmp.innerHTML = trackHTML(t);
   const fresh = tmp.firstElementChild;
-  el.replaceWith(fresh);
-  if (S.open === u) initCardSliders(fresh);
+  // patch the existing card so hover state and transitions carry over (no flash)
+  el.className = fresh.className;
+  el.style.cssText = fresh.style.cssText;
+  el.innerHTML = fresh.innerHTML;
+  if (S.open === u) initCardSliders(el);
 }
 
 // live update of a card's header + value text while dragging
@@ -421,7 +422,7 @@ function renderTimer() {
     el.innerHTML = `수면 타이머<b>${h ? h + ':' : ''}${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>`;
   } else {
     el.classList.toggle('off', !m.timer);
-    el.innerHTML = m.timer ? `수면 타이머<b>${m.timer}분</b>` : `수면 타이머<b>설정 안 함</b>`;
+    el.innerHTML = m.timer ? `수면 타이머<b>${timerWords(m.timer)}</b>` : `수면 타이머<b>설정 안 함</b>`;
   }
 }
 setInterval(() => {
@@ -433,24 +434,51 @@ setInterval(() => {
   renderTimer();
 }, 1000);
 
+// timer length (stored in minutes, may hold seconds as a fraction) as words
+function timerWords(min) {
+  const t = Math.round(min * 60), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  return [h && `${h}시간`, m && `${m}분`, s && `${s}초`].filter(Boolean).join(' ') || '0초';
+}
+// dial-style timer: three wheels (hours, minutes, seconds) that drop down under the timer
+const ROW = 34;
+function closeTimer() { $('.tpop')?.remove(); $('.pl-title .tm')?.setAttribute('aria-expanded', 'false'); }
 function openTimer() {
-  const opts = [0, 15, 30, 45, 60, 90, 120];
-  dialog(`
-    <h3>수면 타이머</h3>
-    <p>정한 시간이 지나면 소리가 천천히 작아지면서 멈춰요.</p>
-    <div class="chips">${opts.map((o) => `<button data-m="${o}" class="${(S.current.timer || 0) === o ? 'on' : ''}">${o ? o + '분' : '끄기'}</button>`).join('')}</div>
-    <div class="row"><input type="number" min="1" max="720" placeholder="직접 입력 (분)" id="tmin"><button class="chip w" id="tset" style="flex:none">설정</button></div>`,
-  (dlg, close) => {
-    const apply = (min) => {
-      S.current.timer = min > 0 ? min : null;
-      S.timerEnd = engine.playing && min > 0 ? Date.now() + min * 60000 : null;
-      persist(); renderTimer(); close();
-      toast(min > 0 ? `${min}분 뒤에 멈춰요` : '타이머를 껐어요');
-    };
-    $$('.chips button', dlg).forEach((b) => (b.onclick = () => apply(+b.dataset.m)));
-    $('#tset', dlg).onclick = () => { const v = +$('#tmin', dlg).value; if (v > 0) apply(Math.min(720, Math.round(v))); };
+  if ($('.tpop')) return closeTimer();
+  const tm = $('.pl-title .tm');
+  if (!tm) return;
+  const base = Math.round((S.timerEnd ? (S.timerEnd - Date.now()) / 60000 : S.current.timer || 30) * 60);
+  const init = [Math.min(12, Math.floor(base / 3600)), Math.floor((base % 3600) / 60), base % 60];
+  const col = (max, i) => `<div class="wh" data-i="${i}">${Array.from({ length: max + 1 }, (_, n) => `<b data-n="${n}">${String(n).padStart(2, '0')}</b>`).join('')}</div>`;
+  const pop = document.createElement('div');
+  pop.className = 'tpop';
+  pop.innerHTML = `<div class="wheels"><div class="band"></div>${col(12, 0)}${col(59, 1)}${col(59, 2)}</div>
+    <div class="wl"><span>시간</span><span>분</span><span>초</span></div>
+    <p>정한 시간이 지나면 소리가 천천히 줄며 멈춰요.</p>
+    <div class="acts"><button data-t="off">타이머 끄기</button><button class="pri" data-t="set">설정</button></div>`;
+  $('.pl-title').append(pop);
+  tm.setAttribute('aria-expanded', 'true');
+  const whs = $$('.wh', pop);
+  const val = (w) => Math.round(w.scrollTop / ROW);
+  const mark = (w) => { const v = val(w); $$('b', w).forEach((b) => b.classList.toggle('on', +b.dataset.n === v)); };
+  whs.forEach((w, i) => {
+    w.scrollTop = init[i] * ROW;
+    mark(w);
+    w.addEventListener('scroll', () => mark(w), { passive: true });
+    w.addEventListener('click', (e) => { const b = e.target.closest('b'); if (b) w.scrollTo({ top: +b.dataset.n * ROW, behavior: 'smooth' }); });
+  });
+  pop.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-t]')?.dataset.t;
+    if (!t) return;
+    const sec = t === 'off' ? 0 : val(whs[0]) * 3600 + val(whs[1]) * 60 + val(whs[2]);
+    const min = sec / 60;
+    S.current.timer = sec > 0 ? min : null;
+    S.timerEnd = engine.playing && sec > 0 ? Date.now() + sec * 1000 : null;
+    persist(); renderTimer(); closeTimer();
+    toast(sec > 0 ? `${timerWords(min)} 뒤에 멈춰요` : '타이머를 껐어요');
   });
 }
+document.addEventListener('pointerdown', (e) => { if ($('.tpop') && !e.target.closest('.tpop, .pl-title .tm')) closeTimer(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('.tpop')) closeTimer(); });
 
 // ---------------------------------------------------------------- actions
 function renderLeft() {
@@ -492,14 +520,14 @@ function toggleSound(sid) {
   if (engine.playing && !S.current.tracks.length) pause();
 }
 
-function loadMix(id) {
+function loadMix(id, { stay = false } = {}) {
   const m = S.mixes.find((x) => x.id === id);
   if (!m) return;
   engine.stopAll();
   S.current = structuredClone(m);
   S.current.tracks.forEach((t) => (t.uid = uid()));
   S.open = null;
-  S.view = 'player';
+  if (!stay) S.view = 'player';
   persist();
   renderLeft(); refreshLibChecks();
   play();
@@ -644,6 +672,12 @@ left.addEventListener('click', (e) => {
     case 'timer': openTimer(); break;
     case 'sheet': break; // handled by pointer logic
     case 'tracks': toggleTracks(); break;
+    case 'mixplay': {
+      const id = a.dataset.id;
+      if (S.current.id === id && S.current.tracks.length) { engine.playing ? pause() : play(); renderMixes(); }
+      else loadMix(id, { stay: true });
+      break;
+    }
     case 'mute':
       t.muted = !t.muted; persist(); syncEngine(); rerenderCard(u); refreshRadar(); refreshBg(); break;
     case 'remove':
@@ -663,6 +697,7 @@ left.addEventListener('click', (e) => {
   }
 });
 left.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.matches('.mixname')) { e.preventDefault(); e.target.blur(); return; }
   if (e.key === 'Enter' && e.target.matches('[data-mix]') && !S.editMixes) loadMix(e.target.dataset.mix);
 });
 left.addEventListener('change', (e) => {
@@ -791,7 +826,6 @@ const shEnd = (e) => {
   if (Math.abs(dy) < 6) S.sheetOpen = !S.sheetOpen;
   else S.sheetOpen = dy < 0;
   sheet.classList.toggle('open', S.sheetOpen);
-  $('.hdl span', sheet).textContent = `${S.sheetOpen ? '⌄' : '⌃'} 공간 배치`;
 };
 left.addEventListener('pointerup', shEnd);
 left.addEventListener('pointercancel', shEnd);
