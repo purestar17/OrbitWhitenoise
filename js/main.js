@@ -74,7 +74,7 @@ function persist() {
   updateSaveBtn();
 }
 // save button: "저장" overwrites the mix; after a rename it becomes "새로 저장" (a new mix, the old one stays)
-const mixSig = (m) => JSON.stringify({ n: m.name, tm: m.timer ?? null, t: m.tracks.map(({ uid: _u, ...r }) => r) });
+const mixSig = (m) => JSON.stringify({ n: m.name, tm: m.timer ?? null, bg: m.bg ?? null, t: m.tracks.map(({ uid: _u, ...r }) => r) });
 function saveState() {
   const name = ($('.mixname')?.value ?? S.current.name).trim() || '새 믹스';
   const saved = S.current.id && S.mixes.find((m) => m.id === S.current.id);
@@ -147,14 +147,39 @@ function renderLib() {
     return `<div class="sec" id="sec-${c.id}">${esc(c.name)} <small>${items.length}</small></div><div class="grid">${cards}${add}</div>`;
   }).join('');
   $('#lib').innerHTML = html || `<div class="libempty">"${esc(S.search)}"에 맞는 음원이 없어요.</div>`;
+  touchCardVideos();
 }
 
+// card preview video: made on first use, kept so it plays again without re-downloading
+const noHover = matchMedia('(hover: none)');
+function cardVideo(card, on) {
+  const s = S.sounds.get(card.dataset.sid);
+  if (!s?.video) return;
+  let v = $('video.pv', card);
+  if (!on) { if (v) { v.classList.remove('on'); v.pause(); } return; }
+  if (!v) {
+    v = document.createElement('video');
+    v.className = 'pv';
+    Object.assign(v, { muted: true, loop: true, playsInline: true, preload: 'auto', src: s.preview || s.video });
+    v.setAttribute('aria-hidden', 'true');
+    v.addEventListener('playing', () => { if (!v.paused) v.classList.add('on'); });
+    card.insertBefore(v, $('.ck', card));
+  }
+  v.play().catch(() => {});
+}
+$('#lib').addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && e.target.matches?.('.card[data-sid]')) cardVideo(e.target, true); }, true);
+$('#lib').addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && e.target.matches?.('.card[data-sid]')) cardVideo(e.target, false); }, true);
+function touchCardVideos() {
+  if (!noHover.matches) return;
+  $$('#lib .card[data-sid]').forEach((c) => cardVideo(c, c.classList.contains('in')));
+}
 function refreshLibChecks() {
   $$('#lib .card[data-sid]').forEach((c) => {
     const on = inMix(c.dataset.sid);
     c.classList.toggle('in', on);
     c.setAttribute('aria-pressed', on);
   });
+  touchCardVideos();
 }
 
 // ---------------------------------------------------------------- left: mixes list
@@ -199,6 +224,8 @@ function renderPlayer() {
         <div class="pl-top">
           <button class="chip" data-act="tomixes"><svg class="ico"><use href="#ic-list"/></svg>나의 믹스</button>
           <span class="sp"></span>
+          <button class="chip ic" data-act="bgpick" aria-label="배경 고르기" title="배경 고르기"><svg class="ico"><use href="#ic-image"/></svg></button>
+          <button class="chip ic" data-act="fs" aria-label="전체화면" title="전체화면"><svg class="ico"><use href="#ic-full"/></svg></button>
           <button class="chip w" data-act="save">저장</button>
           <button class="chip" data-act="share">공유</button>
         </div>
@@ -210,6 +237,10 @@ function renderPlayer() {
         <button class="tbar${S.tracksHidden ? ' off' : ''}" data-act="tracks" aria-expanded="${!S.tracksHidden}" aria-label="음원 목록 접기·펼치기"><i></i><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.6 6 4.1l3.5 3.5"/></svg><i></i></button>
         ${mvolHTML(S.tracksHidden)}
         <div class="tracks${S.tracksHidden ? ' off' : ''}">${m.tracks.length ? m.tracks.map(trackHTML).join('') : `<div class="pl-empty">${isMobile() ? '왼쪽으로 밀어 라이브러리' : '오른쪽 라이브러리'}에서 음원을 누르면<br>여기에 추가되고 바로 재생돼요.</div>`}</div>
+      </div>
+      <div class="fsui">
+        <div class="fs-top"><b>${esc(m.name)}</b><button class="chip" data-act="fsexit"><svg class="ico"><use href="#ic-shrink"/></svg>나가기</button></div>
+        <div class="fs-bot"><button class="pb${engine.playing ? ' on' : ''}" data-act="playpause" aria-label="재생/일시정지"></button>${mvolHTML(true)}</div>
       </div>
       <div class="sheet${S.sheetOpen ? ' open' : ''}">
         <div class="hdl" data-act="sheet"><i></i><span><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.6 6 4.1l3.5 3.5"/></svg>공간 배치</span></div>
@@ -542,8 +573,8 @@ function renderLeft() {
   if (S.view === 'player') renderPlayer(); else renderMixes();
 }
 function renderPlayState() {
-  const pb = $('.pb');
-  if (pb) pb.classList.toggle('on', engine.playing);
+  $$('.pb').forEach((pb) => pb.classList.toggle('on', engine.playing));
+  syncBgVideo();
   const sm = $('.pl-title .ttl small');
   if (sm) sm.textContent = `음원 ${S.current.tracks.length}개${engine.playing ? ' 재생 중' : ''}`;
   if (S.view === 'mixes') renderMixes();
@@ -723,6 +754,9 @@ left.addEventListener('click', (e) => {
     case 'newmix': startNewMix(); break;
     case 'playpause': engine.playing ? pause() : play(); break;
     case 'save': saveMix(); break;
+    case 'bgpick': openBgPick(a); break;
+    case 'fs': enterFs(); break;
+    case 'fsexit': exitFs(); break;
     case 'share': shareMix(); break;
     case 'timer': openTimer(); break;
     case 'sheet': break; // handled by pointer logic
@@ -770,12 +804,89 @@ left.addEventListener('change', (e) => {
 left.addEventListener('input', (e) => { if (e.target.matches('.mixname')) updateSaveBtn(); 
 });
 
+// which sound's picture fills the player: the one picked, else the first ∞ sound with a video, else any with media
+const hasMedia = (s) => !!(s && (s.video || s.image));
+function bgSoundFor(mix) {
+  if (mix.bg === 'scene') return null;
+  const ss = mix.tracks.filter((t) => !t.muted).map((t) => ({ t, s: S.sounds.get(t.soundId) })).filter((x) => hasMedia(x.s));
+  const picked = ss.find((x) => x.s.id === mix.bg);
+  if (picked) return picked.s;
+  return (ss.find((x) => x.s.video && x.t.interval.mode === 'loop') || ss.find((x) => x.s.video) || ss.find((x) => x.t.interval.mode === 'loop') || ss[0])?.s || null;
+}
+let bgMedia = null; // kept between renders so the video does not restart
 function refreshBg() {
   const bg = $('.pl-bg');
   if (!bg) return;
   land.mount(bg);
   land.set(layersFor(S.current.tracks, (id) => S.sounds.get(id)));
+  const s = bgSoundFor(S.current);
+  const key = s ? s.video || s.image : '';
+  if (bgMedia?.dataset.key !== key) {
+    bgMedia?.remove();
+    bgMedia = null;
+    if (s) {
+      bgMedia = document.createElement(s.video ? 'video' : 'img');
+      bgMedia.className = 'media';
+      bgMedia.dataset.key = key;
+      bgMedia.alt = '';
+      if (s.video) Object.assign(bgMedia, { muted: true, loop: true, playsInline: true, preload: 'auto', poster: s.image || '', src: s.video });
+      else bgMedia.src = s.image;
+      bgMedia.addEventListener(s.video ? 'loadeddata' : 'load', () => bgMedia?.classList.add('on'), { once: true });
+    }
+  }
+  if (bgMedia) {
+    bgMedia.style.objectPosition = `${s.focus ?? 50}% 50%`;
+    if (bgMedia.parentElement !== bg) bg.insertBefore(bgMedia, $('.shade', bg));
+  }
+  bg.classList.toggle('has-media', !!bgMedia);
+  syncBgVideo();
 }
+function syncBgVideo() {
+  if (!(bgMedia instanceof HTMLVideoElement)) return;
+  if (engine.playing) bgMedia.play().catch(() => {}); else bgMedia.pause();
+}
+
+// background picker
+function openBgPick(btn) {
+  if ($('.bgpop')) { $('.bgpop').remove(); return; }
+  const cur = bgSoundFor(S.current);
+  const seen = new Set();
+  const opts = S.current.tracks.map((t) => S.sounds.get(t.soundId)).filter((s) => hasMedia(s) && !seen.has(s.id) && seen.add(s.id));
+  const pop = document.createElement('div');
+  pop.className = 'bgpop';
+  pop.innerHTML = `<b>배경</b>${opts.map((s) => `<button data-bg="${esc(s.id)}" class="${cur?.id === s.id ? 'on' : ''}"><span class="th">${art(s)}</span>${esc(s.name)}${s.video ? '<small>영상</small>' : ''}</button>`).join('')}
+    <button data-bg="scene" class="${!cur ? 'on' : ''}"><span class="th"><span class="art scene s-night"></span></span>그림 배경</button>
+    ${opts.length ? '' : '<p>믹스에 영상이나 사진이 있는 음원을 넣으면 여기서 고를 수 있어요.</p>'}`;
+  btn.closest('.pl-top').append(pop);
+  pop.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-bg]');
+    if (!b) return;
+    S.current.bg = b.dataset.bg;
+    persist(); refreshBg(); pop.remove();
+  });
+}
+document.addEventListener('pointerdown', (e) => { if ($('.bgpop') && !e.target.closest('.bgpop, [data-act="bgpick"]')) $('.bgpop').remove(); });
+
+// full screen: the background fills the screen, sound keeps playing
+let fsIdle = 0;
+function enterFs() {
+  document.body.classList.add('fs');
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  fsWake();
+}
+function exitFs() {
+  document.body.classList.remove('fs', 'idle');
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+}
+function fsWake() {
+  document.body.classList.remove('idle');
+  clearTimeout(fsIdle);
+  fsIdle = setTimeout(() => { if (document.body.classList.contains('fs')) document.body.classList.add('idle'); }, 3000);
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fs')) exitFs(); });
+document.addEventListener('pointermove', () => { if (document.body.classList.contains('fs')) fsWake(); });
+document.addEventListener('pointerdown', () => { if (document.body.classList.contains('fs')) fsWake(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('fs')) exitFs(); });
 
 // card header: tap = expand, horizontal drag = volume
 let hdDrag = null;
@@ -1054,7 +1165,8 @@ async function boot() {
     const res = await fetch('sounds/manifest.json', { cache: 'no-cache' });
     const m = await res.json();
     S.cats = m.categories;
-    m.sounds.forEach((s) => S.sounds.set(s.id, { ...s, image: s.image ? 'sounds/' + s.image : null }));
+    const p = (f) => (f ? 'sounds/' + f : null);
+    m.sounds.forEach((s) => S.sounds.set(s.id, { ...s, image: p(s.image), video: p(s.video), preview: p(s.preview) }));
   } catch (e) {
     toast('음원 목록을 불러오지 못했어요');
   }

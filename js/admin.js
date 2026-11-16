@@ -2,6 +2,7 @@
 // Each sound opens in a modal: details, plus audio tools (volume change, seamless loop).
 // Edited audio is encoded to MP3 in the browser with LAME (vendor/lame.min.js, LGPL).
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const SCENES = ['rain', 'tent', 'storm', 'thunder', 'stream', 'wave', 'under', 'forest', 'birds', 'cricket', 'night', 'fire', 'fireplace', 'cafe', 'clock', 'chime', 'white', 'pink', 'brown', 'mine'];
 const SCENE_KO = { rain: '비', tent: '텐트', storm: '폭우', thunder: '번개', stream: '시냇물', wave: '파도', under: '물속', forest: '숲', birds: '새', cricket: '여름밤', night: '밤', fire: '모닥불', fireplace: '벽난로', cafe: '카페', clock: '시계', chime: '풍경', white: '화이트', pink: '핑크', brown: '브라운', mine: '기본' };
@@ -79,7 +80,7 @@ function renderList() {
   $('#list').innerHTML = manifest.sounds.map((s, i) => {
     const cat = manifest.categories.find((c) => c.id === s.category)?.name || s.category;
     const thumb = s.image ? `<span class="th" style="background-image:url(${esc(imageURL(s))})"></span>` : `<span class="th scene s-${esc(s.scene)}"></span>`;
-    const tag = changed.has(s.id) ? '<span class="tag">바뀜</span>' : '';
+    const tag = (s.video ? '<span class="tag">영상</span>' : '') + (changed.has(s.id) ? '<span class="tag">바뀜</span>' : '');
     return `<tr data-i="${i}"><td>${thumb}</td><td><span class="sw" style="background:${esc(s.color)}"></span>${esc(s.name)}${tag}</td><td>${esc(cat)}</td><td>${esc(s.file)}</td><td>${intText(s)}</td><td>${s.volume ?? 60}%</td></tr>`;
   }).join('');
   $('#dl').innerHTML = pending.map((p) => `<a href="${URL.createObjectURL(p.blob)}" download="${esc(p.name.split('/').pop())}">⬇ ${esc(p.name)}</a>`).join('') || '<p>새로 올릴 오디오·사진 파일이 없어요.</p>';
@@ -260,11 +261,12 @@ function drawWave(cv, getSample, total, marks = []) {
 }
 
 // ---------------------------------------------------------------- editor modal
-let ed = null; // { index, orig: AudioBuffer|null, buf: AudioBuffer|null, edits: [], audioFile: File|null, imageFile: File|null }
+let ed = null; // { index, orig, buf, edits, audioFile, imageFile, videoFile, posterBlob, previewBlob, clearMedia }
 
 function openEditor(index) {
   const s = index == null ? { name: '', category: manifest.categories[0]?.id, scene: 'mine', color: '#5ee1c6', interval: 'loop', min: 10, max: 60, value: 60, volume: 60 } : manifest.sounds[index];
-  ed = { index, orig: null, buf: null, edits: [], audioFile: null, imageFile: null, dirty: false };
+  ed = { index, orig: null, buf: null, edits: [], audioFile: null, imageFile: null, videoFile: null, posterBlob: null, previewBlob: null, previewJob: null, clearMedia: false, dirty: false };
+  $('#f-focus').value = s.focus ?? 50;
   $('#dlg-title').textContent = index == null ? '새 음원 추가' : '음원 수정';
   $('#delete').hidden = index == null;
   $('#f-name').value = s.name;
@@ -295,7 +297,8 @@ function openEditor(index) {
       setPicker('#f-audio', f);
       loadAudio(f);
     }).catch(() => loadAudio(`sounds/${s.file}`));
-    if (s.image) fileFor(s.image, 'sounds/' + s.image).then((f) => { if (ed === me) setPicker('#f-image', f); }).catch(() => {});
+    const m = s.video || s.image;
+    if (m) fileFor(m, 'sounds/' + m).then((f) => { if (ed === me) setPicker('#f-image', f); }).catch(() => {});
   } else showTools();
 }
 // the sound's current file as a File, so the file picker shows it as chosen
@@ -330,15 +333,134 @@ function syncInterval() {
 }
 $('#f-int').addEventListener('change', syncInterval);
 
+// the sound's picture as it is now in the editor: { video?, image? } urls, or null
+const urls = new Map();
+const urlOf = (b) => { if (!urls.has(b)) urls.set(b, URL.createObjectURL(b)); return urls.get(b); };
+function currentMedia() {
+  if (!ed || ed.clearMedia) return null;
+  if (ed.videoFile) return { video: urlOf(ed.videoFile), image: ed.posterBlob && urlOf(ed.posterBlob) };
+  if (ed.imageFile) return { image: urlOf(ed.imageFile) };
+  const s = ed.index == null ? null : manifest.sounds[ed.index];
+  if (!s) return null;
+  const u = (f) => (f ? (pendingBlob(f) ? urlOf(pendingBlob(f)) : `sounds/${f}`) : null);
+  return s.video || s.image ? { video: u(s.video), image: u(s.image) } : null;
+}
+const mediaHTML = (m) => (m.video ? `<video src="${esc(m.video)}"${m.image ? ` poster="${esc(m.image)}"` : ''} muted loop autoplay playsinline></video>` : `<img src="${esc(m.image)}" alt="">`);
 function preview() {
   if (!ed) return;
-  const s = ed.index == null ? null : manifest.sounds[ed.index];
-  const img = ed.imageFile ? URL.createObjectURL(ed.imageFile) : s?.image ? imageURL(s) : null;
+  const m = currentMedia();
   const name = $('#f-name').value || '미리보기';
-  $('#pv').innerHTML = (img ? `<img src="${esc(img)}" alt="">` : `<div class="art scene s-${esc($('#f-scene').value)}"></div>`) + `<span>${esc(name)}</span>`;
+  $('#pv').innerHTML = (m ? mediaHTML(m) : `<div class="art scene s-${esc($('#f-scene').value)}"></div>`) + `<span>${esc(name)}</span>`;
+  $('#media-row').hidden = !m;
+  if (m) { $('#crop').innerHTML = mediaHTML(m); showFocus(); }
 }
+function showFocus() { $$('#crop img, #crop video').forEach((e) => { e.style.objectPosition = `${$('#f-focus').value}% 50%`; }); }
+$('#f-focus').addEventListener('input', showFocus);
 ['#f-name', '#f-scene'].forEach((s) => $(s).addEventListener('input', preview));
-$('#f-image').addEventListener('change', () => { ed.imageFile = $('#f-image').files[0] || null; preview(); });
+$('#f-image').addEventListener('change', () => {
+  const f = $('#f-image').files[0];
+  if (!f) return;
+  ed.clearMedia = false;
+  if (f.type.startsWith('video/')) {
+    ed.videoFile = f; ed.imageFile = null; ed.posterBlob = null; ed.previewBlob = null;
+    prepareVideo(f);
+  } else {
+    ed.imageFile = f; ed.videoFile = null; ed.posterBlob = null; ed.previewBlob = null; ed.previewJob = null;
+    $('#media-state').textContent = '';
+  }
+  preview();
+});
+$('#f-media-clear').addEventListener('click', () => {
+  ed.clearMedia = true; ed.videoFile = null; ed.imageFile = null; ed.previewJob = null; ed.dirty = true;
+  $('#f-image').value = '';
+  preview();
+});
+
+// ---------------------------------------------------------------- video: poster image + small preview clip
+function openVideo(file) {
+  return new Promise((ok, fail) => {
+    const v = document.createElement('video');
+    Object.assign(v, { muted: true, playsInline: true, preload: 'auto', src: URL.createObjectURL(file) });
+    v.onloadeddata = () => ok(v);
+    v.onerror = () => fail(new Error('video'));
+  });
+}
+const seek = (v, t) => new Promise((ok) => { v.onseeked = () => ok(); v.currentTime = t; });
+async function posterFrom(v) {
+  await seek(v, 0);
+  const W = Math.min(960, v.videoWidth), H = Math.round(W * v.videoHeight / v.videoWidth);
+  const c = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  c.getContext('2d').drawImage(v, 0, 0, W, H);
+  return new Promise((ok) => c.toBlob(ok, 'image/webp', 0.82));
+}
+let muxReady = null;
+function loadMuxer() {
+  muxReady ||= new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = 'vendor/mp4-muxer.js';
+    s.onload = () => ok(window.Mp4Muxer);
+    s.onerror = () => { muxReady = null; fail(new Error('mux')); };
+    document.head.append(s);
+  });
+  return muxReady;
+}
+// 480px-wide H.264 MP4 for the library card (only where the browser can encode H.264)
+async function previewFrom(v, onProgress, alive) {
+  if (!('VideoEncoder' in window)) return null;
+  const W = 480, H = Math.round(W * v.videoHeight / v.videoWidth / 2) * 2, fps = 24;
+  const codecs = window.__previewCodecs || [['avc1.42001f', 'avc']];
+  let pick = null;
+  for (const [codec, mux] of codecs) {
+    try { if ((await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: 350_000, framerate: fps })).supported) { pick = { codec, mux }; break; } } catch { /* next */ }
+  }
+  if (!pick) return null;
+  const { Muxer, ArrayBufferTarget } = await loadMuxer();
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: pick.mux, width: W, height: H }, fastStart: 'in-memory' });
+  let err = null;
+  const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (e) => { err = e; } });
+  enc.configure({ codec: pick.codec, width: W, height: H, bitrate: 350_000, framerate: fps });
+  const c = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = c.getContext('2d');
+  const n = Math.floor(Math.min(v.duration, 30) * fps);
+  for (let i = 0; i < n; i++) {
+    if (!alive() || err) { enc.close(); return null; }
+    await seek(v, i / fps);
+    g.drawImage(v, 0, 0, W, H);
+    const frame = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+    enc.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    frame.close();
+    if (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    onProgress(i / n);
+  }
+  await enc.flush();
+  if (err) return null;
+  muxer.finalize();
+  return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+}
+function prepareVideo(file) {
+  const me = ed, job = {};
+  ed.previewJob = job;
+  const mb = file.size / 1024 / 1024;
+  const warn = mb > 25 ? ` · ${mb.toFixed(0)}MB라 꽤 커요 (10MB 안팎 추천)` : '';
+  const state = (t) => { if (ed === me && me.previewJob === job) $('#media-state').textContent = t + warn; };
+  state('영상에서 대표 이미지를 만드는 중…');
+  job.done = (async () => {
+    try {
+      const v = await openVideo(file);
+      me.posterBlob = await posterFrom(v);
+      if (ed === me) preview();
+      state('카드 미리보기 영상을 만드는 중…');
+      me.previewBlob = await previewFrom(v, (p) => state(`카드 미리보기 영상을 만드는 중… ${Math.round(p * 100)}%`), () => ed === me && me.previewJob === job);
+      URL.revokeObjectURL(v.src);
+      state(me.previewBlob
+        ? `준비됐어요 · 대표 이미지 ${(me.posterBlob.size / 1024).toFixed(0)}KB · 미리보기 영상 ${(me.previewBlob.size / 1024).toFixed(0)}KB`
+        : '준비됐어요 · 이 브라우저에서는 미리보기 영상을 만들 수 없어 카드에도 원본 영상을 써요');
+    } catch {
+      me.videoFile = null;
+      state('이 영상은 열 수 없어요. MP4(H.264) 파일을 올려 주세요.');
+      if (ed === me) preview();
+    }
+  })();
+}
 $('#f-audio').addEventListener('change', () => {
   const f = $('#f-audio').files[0];
   if (!f) return;
@@ -580,11 +702,23 @@ $('#save').addEventListener('click', async () => {
       queue(s.file, audio);
       loud.set(s.file, loudness(ed.buf));
     }
-    if (ed.imageFile) {
+    if (ed.videoFile) {
+      if (ed.previewJob?.done) { btn.textContent = '영상 준비 중…'; await ed.previewJob.done; }
+      if (!ed.videoFile) throw new Error('video');
+      const vext = (ed.videoFile.name.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase();
+      s.video = `videos/${s.id}${vext === '.mov' ? '.mp4' : vext}`;
+      queue(s.video, ed.videoFile);
+      if (ed.posterBlob) { s.image = `images/${s.id}.webp`; queue(s.image, ed.posterBlob); } else delete s.image;
+      if (ed.previewBlob) { s.preview = `videos/${s.id}-s.mp4`; queue(s.preview, ed.previewBlob); } else delete s.preview;
+    } else if (ed.imageFile) {
       const iext = (ed.imageFile.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
       s.image = `images/${s.id}${iext}`;
       queue(s.image, ed.imageFile);
+      delete s.video; delete s.preview;
+    } else if (ed.clearMedia) {
+      delete s.image; delete s.video; delete s.preview; delete s.focus;
     }
+    if (s.image || s.video) s.focus = clampN($('#f-focus').value, 0, 100, 50);
     if (ed.index == null) manifest.sounds.push(s); else manifest.sounds[ed.index] = s;
     changed.add(s.id);
     ed.dirty = false;
@@ -592,7 +726,7 @@ $('#save').addEventListener('click', async () => {
     renderList();
     msg(`"${name}" 저장했어요. 아래에서 파일을 내려받아 올려 주세요.`);
   } catch (e) {
-    dmsg(e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
+    dmsg(e.message === 'video' ? '영상을 열 수 없어요. 다른 파일을 골라 주세요.' : e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
   } finally {
     btn.disabled = false;
     btn.classList.remove('busy');

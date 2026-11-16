@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump VERSION when app files change so users get the new version.
-const VERSION = 'orbit-v22';
+const VERSION = 'orbit-v23';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'css/scenes.css', 'css/landscape.css',
   'js/main.js', 'js/engine.js', 'js/model.js', 'js/landscape.js',
@@ -24,6 +24,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // fonts etc. go straight to the network
+  if (/\.(mp4|webm|mov)$/i.test(url.pathname)) return; // videos stream with range requests; leave them to the browser cache
 
   // App code and the sound list: network first, so updates show up; cache when offline.
   if (req.mode === 'navigate' || /\.(html|js|css|json|webmanifest)$/.test(url.pathname)) {
