@@ -80,9 +80,10 @@ function renderList() {
   $('#list').innerHTML = manifest.sounds.map((s, i) => {
     const cat = manifest.categories.find((c) => c.id === s.category)?.name || s.category;
     const thumb = s.image ? `<span class="th" style="background-image:url(${esc(imageURL(s))})"></span>` : `<span class="th scene s-${esc(s.scene)}"></span>`;
-    const tag = (s.video ? '<span class="tag">영상</span>' : '') + (changed.has(s.id) ? '<span class="tag">바뀜</span>' : '');
+    const tag = (s.video ? '<span class="tag">영상</span>' : '') + (changed.has(s.id) ? '<span class="tag">수정됨</span>' : '');
     return `<tr data-i="${i}"><td>${thumb}</td><td><span class="sw" style="background:${esc(s.color)}"></span>${esc(s.name)}${tag}</td><td>${esc(cat)}</td><td>${esc(s.file)}</td><td>${intText(s)}</td><td>${s.volume ?? 60}%</td></tr>`;
   }).join('');
+  if (typeof ghStatus === 'function') queueMicrotask(ghStatus);
   $('#dl').innerHTML = pending.map((p) => `<a href="${URL.createObjectURL(p.blob)}" download="${esc(p.name.split('/').pop())}">⬇ ${esc(p.name)}</a>`).join('') || '<p>새로 올릴 오디오·사진 파일이 없어요.</p>';
 }
 $('#list').addEventListener('click', (e) => { const tr = e.target.closest('[data-i]'); if (tr) openEditor(+tr.dataset.i); });
@@ -350,12 +351,57 @@ function preview() {
   if (!ed) return;
   const m = currentMedia();
   const name = $('#f-name').value || '미리보기';
-  $('#pv').innerHTML = (m ? mediaHTML(m) : `<div class="art scene s-${esc($('#f-scene').value)}"></div>`) + `<span>${esc(name)}</span>`;
+  $('#pv').innerHTML = (m ? mediaHTML(m) + '<i class="fwin"></i>' : `<div class="art scene s-${esc($('#f-scene').value)}"></div>`) + `<span>${esc(name)}</span>`;
+  $('#pv').classList.toggle('has-media', !!m);
+  $('#pv-hint').hidden = !m;
   $('#media-row').hidden = !m;
-  if (m) { $('#crop').innerHTML = mediaHTML(m); showFocus(); }
+  if (m) { const el = $('#pv img, #pv video'); el.addEventListener(el.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', showFocus); showFocus(); }
 }
-function showFocus() { $$('#crop img, #crop video').forEach((e) => { e.style.objectPosition = `${$('#f-focus').value}% 50%`; }); }
-$('#f-focus').addEventListener('input', showFocus);
+// mix screen is about 9:16; show which part of the picture it keeps
+const MIX_ASPECT = 9 / 16;
+function showFocus() {
+  const pv = $('#pv'), el = $('#pv img, #pv video'), win = $('#pv .fwin');
+  if (!el || !win) return;
+  const nw = el.videoWidth || el.naturalWidth, nh = el.videoHeight || el.naturalHeight;
+  if (!nw || !nh) return;
+  const W = pv.clientWidth, Hc = pv.clientHeight, A = nw / nh;
+  // while focusing the whole picture is shown (contain): its box inside the card
+  const mw = A >= W / Hc ? W : Hc * A, mh = mw / A, mx = (W - mw) / 2, my = (Hc - mh) / 2;
+  const frac = Math.min(1, MIX_ASPECT / A), f = +$('#f-focus').value / 100;
+  Object.assign(win.style, { left: `${mx + f * (1 - frac) * mw}px`, top: `${my}px`, width: `${frac * mw}px`, height: `${mh}px` });
+  el.style.objectPosition = pv.classList.contains('focusing') ? '' : '50% 50%';
+}
+let fdrag = null;
+$('#pv').addEventListener('pointerdown', (e) => {
+  if (!$('#pv').classList.contains('has-media')) return;
+  e.preventDefault();
+  $('#pv').setPointerCapture(e.pointerId);
+  $('#pv').classList.add('focusing');
+  fdrag = e.pointerId;
+  $('#pv-hint').textContent = '믹스 화면';
+  moveFocus(e);
+});
+function moveFocus(e) {
+  const pv = $('#pv'), el = $('#pv img, #pv video'), win = $('#pv .fwin');
+  const nw = el?.videoWidth || el?.naturalWidth, nh = el?.videoHeight || el?.naturalHeight;
+  if (!nw) return;
+  const r = pv.getBoundingClientRect(), A = nw / nh;
+  const mw = A >= r.width / r.height ? r.width : r.height * A, mx = (r.width - mw) / 2;
+  const frac = Math.min(1, MIX_ASPECT / A);
+  if (frac >= 1) return;
+  const f = (e.clientX - r.left - mx - (frac * mw) / 2) / ((1 - frac) * mw);
+  $('#f-focus').value = Math.round(Math.max(0, Math.min(1, f)) * 100);
+  if (ed) ed.dirty = true;
+  showFocus();
+}
+$('#pv').addEventListener('pointermove', (e) => { if (fdrag === e.pointerId) moveFocus(e); });
+const endFocus = (e) => {
+  if (fdrag !== e.pointerId) return;
+  fdrag = null;
+  setTimeout(() => { if (fdrag == null) { $('#pv').classList.remove('focusing'); $('#pv-hint').textContent = '누르고 좌우로 끌면 믹스 화면 위치'; showFocus(); } }, 500);
+};
+$('#pv').addEventListener('pointerup', endFocus);
+$('#pv').addEventListener('pointercancel', endFocus);
 ['#f-name', '#f-scene'].forEach((s) => $(s).addEventListener('input', preview));
 $('#f-image').addEventListener('change', () => {
   const f = $('#f-image').files[0];
@@ -667,6 +713,15 @@ $('#lc-make').addEventListener('click', () => {
   playSeam();
 });
 
+// ---------------------------------------------------------------- fold the audio tools
+const foldTools = (on) => {
+  $('#tools').classList.toggle('folded', on);
+  $('#tools-fold').setAttribute('aria-expanded', !on);
+  try { localStorage.setItem('orbit-admin-tools-folded', on ? '1' : '0'); } catch { /* private mode */ }
+};
+$('#tools-fold').addEventListener('click', () => foldTools(!$('#tools').classList.contains('folded')));
+try { if (localStorage.getItem('orbit-admin-tools-folded') === '1') foldTools(true); } catch { /* private mode */ }
+
 // ---------------------------------------------------------------- save / delete
 $('#save').addEventListener('click', async () => {
   const name = $('#f-name').value.trim();
@@ -724,7 +779,7 @@ $('#save').addEventListener('click', async () => {
     ed.dirty = false;
     closeEditor();
     renderList();
-    msg(`"${name}" 저장했어요. 아래에서 파일을 내려받아 올려 주세요.`);
+    msg(`"${name}" 저장했어요. 아래 "GitHub에 바로 올리기"를 누르면 앱에 반영돼요.`);
   } catch (e) {
     dmsg(e.message === 'video' ? '영상을 열 수 없어요. 다른 파일을 골라 주세요.' : e.message === 'lame' ? 'MP3 변환 도구를 불러오지 못했어요. 새로고침 후 다시 해 주세요.' : '저장 중 문제가 생겼어요.');
   } finally {
@@ -740,12 +795,97 @@ function queue(name, blob) {
 }
 $('#delete').addEventListener('click', () => {
   const s = manifest.sounds[ed.index];
-  if (!confirm(`"${s.name}"을(를) 목록에서 뺄까요? (manifest.json을 올려야 반영돼요)`)) return;
+  if (!confirm(`"${s.name}"을(를) 목록에서 뺄까요? (GitHub에 올려야 반영돼요)`)) return;
   manifest.sounds.splice(ed.index, 1);
+  manifestDirty = true;
   ed.dirty = false;
   closeEditor();
   renderList();
-  msg(`"${s.name}"을(를) 뺐어요. manifest.json을 내려받아 올려 주세요.`);
+  msg(`"${s.name}"을(를) 뺐어요. "GitHub에 바로 올리기"를 누르면 반영돼요.`);
 });
+
+// ---------------------------------------------------------------- GitHub: commit everything in one go
+const GH = {
+  get token() { try { return localStorage.getItem('orbit-gh-token') || ''; } catch { return ''; } },
+  get repo() { try { return localStorage.getItem('orbit-gh-repo') || 'purestar17/OrbitWhitenoise'; } catch { return 'purestar17/OrbitWhitenoise'; } },
+};
+async function gh(path, opt = {}, token = GH.token, repo = GH.repo) {
+  const res = await fetch(`https://api.github.com/repos/${repo}${path}`, {
+    ...opt,
+    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : {}) },
+  });
+  if (!res.ok) { const e = new Error(`gh ${res.status}`); e.status = res.status; throw e; }
+  return res.status === 204 ? null : res.json();
+}
+const b64 = (blob) => new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = fail; r.readAsDataURL(blob); });
+function ghStatus() {
+  $('#gh-set').textContent = GH.token ? '토큰 설정 ✓' : '토큰 설정';
+  $('#gh-push').disabled = !(pending.length || changed.size || manifestDirty);
+}
+let manifestDirty = false;
+$('#gh-set').addEventListener('click', () => {
+  $('#gh-form').hidden = !$('#gh-form').hidden;
+  $('#gh-repo').value = GH.repo;
+  $('#gh-token').value = '';
+  $('#gh-token').placeholder = GH.token ? '저장된 토큰이 있어요 (바꾸려면 새로 붙여 넣기)' : 'github_pat_로 시작하는 긴 글자';
+});
+$('#gh-save').addEventListener('click', async () => {
+  const token = $('#gh-token').value.trim() || GH.token, repo = $('#gh-repo').value.trim();
+  if (!token) return ($('#gh-msg').textContent = '토큰을 붙여 넣어 주세요');
+  $('#gh-msg').textContent = '확인 중…';
+  try {
+    const r = await gh('', {}, token, repo);
+    if (!r.permissions?.push) throw Object.assign(new Error('perm'), { status: 403 });
+    localStorage.setItem('orbit-gh-token', token);
+    localStorage.setItem('orbit-gh-repo', repo);
+    $('#gh-msg').textContent = '저장했어요. 이제 바로 올릴 수 있어요.';
+    $('#gh-token').value = '';
+    setTimeout(() => { $('#gh-form').hidden = true; $('#gh-msg').textContent = ''; }, 1500);
+  } catch (e) {
+    $('#gh-msg').textContent = e.status === 401 ? '토큰이 맞지 않아요. 다시 복사해 주세요.' : e.status === 404 ? '저장소를 찾을 수 없어요. 저장소 이름과 토큰의 저장소 선택을 확인해 주세요.' : e.status === 403 ? '쓰기 권한이 없어요. Contents를 Read and write로 해 주세요.' : '확인하지 못했어요. 인터넷 연결을 확인해 주세요.';
+  }
+  ghStatus();
+});
+$('#gh-forget').addEventListener('click', () => {
+  try { localStorage.removeItem('orbit-gh-token'); } catch { /* private mode */ }
+  $('#gh-msg').textContent = '토큰을 지웠어요.';
+  ghStatus();
+});
+$('#gh-push').addEventListener('click', async () => {
+  if (!GH.token) { $('#gh-form').hidden = false; $('#gh-msg').textContent = '먼저 토큰을 설정해 주세요.'; return; }
+  const btn = $('#gh-push'), state = (t) => { $('#gh-state').textContent = t; };
+  btn.disabled = true; btn.classList.add('busy');
+  try {
+    const files = [...pending.map((p) => ({ path: `sounds/${p.name}`, blob: p.blob })),
+      { path: 'sounds/manifest.json', blob: new Blob([JSON.stringify(manifest, null, 2) + '\n'], { type: 'application/json' }) }];
+    const tree = [];
+    for (const [i, f] of files.entries()) {
+      state(`파일 올리는 중… ${i + 1}/${files.length}`);
+      const blob = await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: await b64(f.blob), encoding: 'base64' }) });
+      tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
+    }
+    state('저장소에 기록하는 중…');
+    const names = [...changed].map((id) => manifest.sounds.find((s) => s.id === id)?.name).filter(Boolean);
+    const message = `관리자: ${names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ` 외 ${names.length - 3}개` : '') + ' 수정' : '음원 목록 수정'}`;
+    for (let attempt = 0; ; attempt++) {
+      const ref = await gh('/git/ref/heads/main');
+      const head = await gh(`/git/commits/${ref.object.sha}`);
+      const t = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: head.tree.sha, tree }) });
+      const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: t.sha, parents: [ref.object.sha] }) });
+      try { await gh('/git/refs/heads/main', { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }); break; }
+      catch (e) { if (attempt >= 2 || e.status !== 422) throw e; } // someone else pushed meanwhile: rebuild on the new head
+    }
+    pending.length = 0; changed.clear(); manifestDirty = false;
+    renderList();
+    state('');
+    msg('저장소에 올렸어요. 1~2분 뒤 앱에 반영돼요.');
+  } catch (e) {
+    state(e.status === 401 ? '토큰이 만료됐거나 맞지 않아요. 토큰을 다시 설정해 주세요.' : e.status === 403 || e.status === 404 ? '저장소에 쓸 권한이 없어요. 토큰 설정을 확인해 주세요.' : e.status === 413 || e.status === 422 ? '파일이 너무 커서 올리지 못했어요. 영상 크기를 줄여 주세요.' : '올리지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+  } finally {
+    btn.classList.remove('busy');
+    ghStatus();
+  }
+});
+window.addEventListener('beforeunload', (e) => { if (pending.length || changed.size || manifestDirty) { e.preventDefault(); e.returnValue = ''; } });
 
 load();
