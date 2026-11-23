@@ -73,7 +73,15 @@ td .th{width:44px;height:32px;border-radius:6px;display:block;background-size:co
 .card video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .media-row{display:flex;gap:12px;align-items:center;margin:-6px 0 14px}
 .media-row .state{margin:0}
-.pv-cap{display:flex;justify-content:space-between;gap:6px;width:180px}
+.clips{margin:-4px 0 16px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px}
+.clips-hd{display:flex;flex-direction:column;gap:3px;font-size:13px;color:#fff;margin-bottom:8px}
+#clip-list{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}
+#clip-list li{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--mut);background:var(--bg);border-radius:8px;padding:6px 10px}
+#clip-list li b{color:#fff;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#clip-list li em{font-style:normal;font-size:11px;color:var(--acc)}
+#clip-list li button{padding:2px 6px}
+.clip-add{display:inline-block;cursor:pointer;font-size:13px;color:var(--acc);padding:4px 0}
+.pv-cap{display:flex;flex-direction:column;gap:2px;width:180px}
 .pv-cap b{font-weight:500;color:#ffd36b;font-size:10.5px}
 #pv.has-media{cursor:ew-resize;touch-action:none;user-select:none}
 #pv .fwin{position:absolute;border:2px solid #ffd36b;border-radius:4px;box-shadow:0 0 0 999px #000b;opacity:0;transition:opacity .2s;z-index:3;pointer-events:none}
@@ -173,6 +181,11 @@ label.inl{flex-direction:row;align-items:center;gap:6px;font-size:13px}
     <div class="media-row" id="media-row" hidden>
       <div class="state" id="media-state"></div><span class="sp" style="flex:1"></span>
       <button class="del" id="f-media-clear" style="padding:4px 0">사진·영상 빼기</button>
+    </div>
+    <div class="clips" id="clips" hidden>
+      <div class="clips-hd"><b>이어서 재생할 영상</b><span class="small">여러 개를 올리면 앱에서 무작위 순서로 자연스럽게 겹쳐 이어 재생해요. 같은 장면을 seed만 바꿔 만든 영상이 잘 어울려요.</span></div>
+      <ul id="clip-list"></ul>
+      <label class="clip-add">+ 영상 추가<input id="f-clips" type="file" accept="video/mp4,video/webm,video/quicktime" multiple hidden></label>
     </div>
     <div class="form">
       <label>오디오 파일<input id="f-audio" type="file" accept="audio/*"></label>

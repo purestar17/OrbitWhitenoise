@@ -80,7 +80,7 @@ function renderList() {
   $('#list').innerHTML = manifest.sounds.map((s, i) => {
     const cat = manifest.categories.find((c) => c.id === s.category)?.name || s.category;
     const thumb = s.image ? `<span class="th" style="background-image:url(${esc(imageURL(s))})"></span>` : `<span class="th scene s-${esc(s.scene)}"></span>`;
-    const tag = (s.video ? '<span class="tag">영상</span>' : '') + (changed.has(s.id) ? '<span class="tag">수정됨</span>' : '');
+    const tag = (s.video ? `<span class="tag">영상${s.clips?.length ? ` ${s.clips.length + 1}개` : ''}</span>` : '') + (changed.has(s.id) ? '<span class="tag">수정됨</span>' : '');
     return `<tr data-i="${i}"><td>${thumb}</td><td><span class="sw" style="background:${esc(s.color)}"></span>${esc(s.name)}${tag}</td><td>${esc(cat)}</td><td>${esc(s.file)}</td><td>${intText(s)}</td><td>${s.volume ?? 60}%</td></tr>`;
   }).join('');
   if (typeof ghStatus === 'function') queueMicrotask(ghStatus);
@@ -266,7 +266,7 @@ let ed = null; // { index, orig, buf, edits, audioFile, imageFile, videoFile, po
 
 function openEditor(index) {
   const s = index == null ? { name: '', category: manifest.categories[0]?.id, scene: 'mine', color: '#5ee1c6', interval: 'loop', min: 10, max: 60, value: 60, volume: 60 } : manifest.sounds[index];
-  ed = { index, orig: null, buf: null, edits: [], audioFile: null, imageFile: null, videoFile: null, posterBlob: null, previewBlob: null, previewJob: null, clearMedia: false, dirty: false };
+  ed = { index, orig: null, buf: null, edits: [], audioFile: null, imageFile: null, videoFile: null, posterBlob: null, previewBlob: null, previewJob: null, clearMedia: false, dirty: false, clips: (s.clips || []).map((path) => ({ path })) };
   $('#f-focus').value = s.focus ?? 50;
   $('#dlg-title').textContent = index == null ? '새 음원 추가' : '음원 수정';
   $('#delete').hidden = index == null;
@@ -355,8 +355,30 @@ function preview() {
   $('#pv').classList.toggle('has-media', !!m);
   $('#pv-hint').hidden = !m;
   $('#media-row').hidden = !m;
+  renderClips(!!m?.video);
   if (m) { const el = $('#pv img, #pv video'); el.addEventListener(el.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', showFocus); showFocus(); }
 }
+// extra clips played after the main video, in random order
+function renderClips(show) {
+  $('#clips').hidden = !show;
+  if (!show) return;
+  const firstName = ed.videoFile ? ed.videoFile.name : (manifest.sounds[ed.index]?.video || '').split('/').pop();
+  $('#clip-list').innerHTML = `<li><b>${esc(firstName)}</b><em>대표 영상</em></li>` + ed.clips.map((c, i) =>
+    `<li><b>${esc(c.file ? c.file.name : c.path.split('/').pop())}</b>${c.file ? '<em>새로 추가</em>' : ''}<button class="del" data-rm="${i}" aria-label="빼기">✕</button></li>`).join('');
+}
+$('#clip-list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-rm]');
+  if (!b) return;
+  ed.clips.splice(+b.dataset.rm, 1);
+  ed.dirty = true;
+  renderClips(true);
+});
+$('#f-clips').addEventListener('change', () => {
+  for (const f of $('#f-clips').files) if (f.type.startsWith('video/')) ed.clips.push({ file: f });
+  $('#f-clips').value = '';
+  ed.dirty = true;
+  renderClips(true);
+});
 // mix screen is about 9:16; show which part of the picture it keeps
 const MIX_ASPECT = 9 / 16;
 function showFocus() {
@@ -774,6 +796,15 @@ $('#save').addEventListener('click', async () => {
       delete s.image; delete s.video; delete s.preview; delete s.focus;
     }
     if (s.image || s.video) s.focus = clampN($('#f-focus').value, 0, 100, 50);
+    if (s.video && ed.clips.length) {
+      s.clips = ed.clips.map((c, i) => {
+        if (!c.file) return c.path;
+        const ext = (c.file.name.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase();
+        const path = `videos/${s.id}-${Date.now().toString(36)}${i}${ext === '.mov' ? '.mp4' : ext}`;
+        queue(path, c.file);
+        return path;
+      });
+    } else delete s.clips;
     if (ed.index == null) manifest.sounds.push(s); else manifest.sounds[ed.index] = s;
     changed.add(s.id);
     ed.dirty = false;

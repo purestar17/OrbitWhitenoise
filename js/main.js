@@ -1,4 +1,5 @@
 import { Engine } from './engine.js';
+import { LoopVideo } from './loop.js';
 import { Landscape, layersFor } from './landscape.js';
 import {
   defaultTrack, newMix, uid, fmtSec, fmtShort, parseTime, logPos, posLog, snapSec, intervalLabel, MAX_INT,
@@ -155,17 +156,14 @@ const noHover = matchMedia('(hover: none)');
 function cardVideo(card, on) {
   const s = S.sounds.get(card.dataset.sid);
   if (!s?.video) return;
-  let v = $('video.pv', card);
-  if (!on) { if (v) { v.classList.remove('on'); v.pause(); } return; }
-  if (!v) {
-    v = document.createElement('video');
-    v.className = 'pv';
-    Object.assign(v, { muted: true, loop: true, playsInline: true, preload: 'auto', src: s.preview || s.video });
-    v.setAttribute('aria-hidden', 'true');
-    v.addEventListener('playing', () => { if (!v.paused) v.classList.add('on'); });
-    card.insertBefore(v, $('.ck', card));
+  let lv = $('.pv', card)?._lv;
+  if (!on) { if (lv) { lv.el.classList.remove('on'); lv.pause(); } return; }
+  if (!lv) {
+    lv = new LoopVideo([s.preview || s.video], { className: 'pv lv', fade: 0.6 });
+    lv.v.forEach((v) => v.addEventListener('playing', () => { if (lv.playing) lv.el.classList.add('on'); }));
+    card.insertBefore(lv.el, $('.ck', card));
   }
-  v.play().catch(() => {});
+  lv.play();
 }
 $('#lib').addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && e.target.matches?.('.card[data-sid]')) cardVideo(e.target, true); }, true);
 $('#lib').addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && e.target.matches?.('.card[data-sid]')) cardVideo(e.target, false); }, true);
@@ -813,37 +811,40 @@ function bgSoundFor(mix) {
   if (picked) return picked.s;
   return (ss.find((x) => x.s.video && x.t.interval.mode === 'loop') || ss.find((x) => x.s.video) || ss.find((x) => x.t.interval.mode === 'loop') || ss[0])?.s || null;
 }
-let bgMedia = null; // kept between renders so the video does not restart
+let bgMedia = null, bgLoop = null; // kept between renders so the video does not restart
 function refreshBg() {
   const bg = $('.pl-bg');
   if (!bg) return;
   land.mount(bg);
   land.set(layersFor(S.current.tracks, (id) => S.sounds.get(id)));
   const s = bgSoundFor(S.current);
-  const key = s ? s.video || s.image : '';
+  const key = s ? (s.video ? [s.video, ...(s.clips || [])].join('|') : s.image) : '';
   if (bgMedia?.dataset.key !== key) {
-    bgMedia?.remove();
-    bgMedia = null;
-    if (s) {
-      bgMedia = document.createElement(s.video ? 'video' : 'img');
+    if (bgLoop) bgLoop.destroy(); else bgMedia?.remove();
+    bgMedia = bgLoop = null;
+    if (s?.video) {
+      bgLoop = new LoopVideo([s.video, ...(s.clips || [])], { className: 'media lv', poster: s.image || '', onReady: () => bgMedia?.classList.add('on') });
+      bgMedia = bgLoop.el;
+    } else if (s) {
+      bgMedia = document.createElement('img');
       bgMedia.className = 'media';
-      bgMedia.dataset.key = key;
       bgMedia.alt = '';
-      if (s.video) Object.assign(bgMedia, { muted: true, loop: true, playsInline: true, preload: 'auto', poster: s.image || '', src: s.video });
-      else bgMedia.src = s.image;
-      bgMedia.addEventListener(s.video ? 'loadeddata' : 'load', () => bgMedia?.classList.add('on'), { once: true });
+      bgMedia.src = s.image;
+      bgMedia.addEventListener('load', () => bgMedia?.classList.add('on'), { once: true });
     }
+    if (bgMedia) bgMedia.dataset.key = key;
   }
   if (bgMedia) {
-    bgMedia.style.objectPosition = `${s.focus ?? 50}% 50%`;
+    const pos = `${s.focus ?? 50}% 50%`;
+    if (bgLoop) bgLoop.setPos(pos); else bgMedia.style.objectPosition = pos;
     if (bgMedia.parentElement !== bg) bg.insertBefore(bgMedia, $('.shade', bg));
   }
   bg.classList.toggle('has-media', !!bgMedia);
   syncBgVideo();
 }
 function syncBgVideo() {
-  if (!(bgMedia instanceof HTMLVideoElement)) return;
-  if (engine.playing) bgMedia.play().catch(() => {}); else bgMedia.pause();
+  if (!bgLoop) return;
+  if (engine.playing) bgLoop.play(); else bgLoop.pause();
 }
 
 // background picker
@@ -1166,7 +1167,7 @@ async function boot() {
     const m = await res.json();
     S.cats = m.categories;
     const p = (f) => (f ? 'sounds/' + f : null);
-    m.sounds.forEach((s) => S.sounds.set(s.id, { ...s, image: p(s.image), video: p(s.video), preview: p(s.preview) }));
+    m.sounds.forEach((s) => S.sounds.set(s.id, { ...s, image: p(s.image), video: p(s.video), preview: p(s.preview), clips: s.clips?.map(p) }));
   } catch (e) {
     toast('음원 목록을 불러오지 못했어요');
   }
